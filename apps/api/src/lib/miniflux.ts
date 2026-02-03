@@ -151,7 +151,12 @@ export class MinifluxClient {
       throw new MinifluxError(res.status, error, path);
     }
 
-    return res.json();
+    // Handle empty responses (204 No Content)
+    const text = await res.text();
+    if (!text) {
+      return undefined as T;
+    }
+    return JSON.parse(text);
   }
 
   // ============ Feeds ============
