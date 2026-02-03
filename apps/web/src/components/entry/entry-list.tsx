@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Entry } from '@feedglow/shared';
 import { useMarkAsRead, useToggleBookmark } from '@/hooks';
 import { EntryListSkeleton } from '@/components/ui/skeleton';
+import { AllCaughtUpState } from '@/components/ui/empty-state';
 
 interface EntryListProps {
   entries: Entry[];
@@ -35,17 +36,7 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
   }
 
   if (entries.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center h-64 text-gray-500"
-      >
-        <span className="text-5xl mb-4">🎉</span>
-        <p className="text-lg font-medium">All caught up!</p>
-        <p className="text-sm text-gray-400 mt-1">No unread articles</p>
-      </motion.div>
-    );
+    return <AllCaughtUpState />;
   }
 
   return (

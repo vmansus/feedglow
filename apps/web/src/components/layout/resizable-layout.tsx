@@ -1,0 +1,103 @@
+'use client';
+
+import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
+
+interface ResizableLayoutProps {
+  sidebar?: ReactNode;
+  list: ReactNode;
+  reader: ReactNode;
+  listHeader?: ReactNode;
+  defaultListSize?: number;
+  minListSize?: number;
+  maxListSize?: number;
+}
+
+export function ResizableLayout({
+  list,
+  reader,
+  listHeader,
+  defaultListSize = 384, // 384px = w-96
+  minListSize = 280,
+  maxListSize = 600,
+}: ResizableLayoutProps) {
+  const [listWidth, setListWidth] = useState(defaultListSize);
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load saved width from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('feedglow-list-width');
+    if (saved) {
+      const width = parseInt(saved, 10);
+      if (width >= minListSize && width <= maxListSize) {
+        setListWidth(width);
+      }
+    }
+  }, [minListSize, maxListSize]);
+
+  // Save width to localStorage
+  useEffect(() => {
+    if (!isResizing) {
+      localStorage.setItem('feedglow-list-width', String(listWidth));
+    }
+  }, [listWidth, isResizing]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - containerRect.left;
+      setListWidth(Math.min(maxListSize, Math.max(minListSize, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, minListSize, maxListSize]);
+
+  return (
+    <div ref={containerRef} className="flex h-full">
+      {/* List Panel */}
+      <div
+        style={{ width: listWidth }}
+        className="flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-shrink-0"
+      >
+        {listHeader && (
+          <div className="sticky top-0 bg-white dark:bg-gray-900 z-10 border-b border-gray-200 dark:border-gray-800">
+            {listHeader}
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto">{list}</div>
+      </div>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={`w-1 cursor-col-resize transition-colors flex-shrink-0 ${
+          isResizing ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700 hover:bg-orange-400 dark:hover:bg-orange-500'
+        }`}
+      />
+
+      {/* Reader Panel */}
+      <div className="flex-1 bg-white dark:bg-gray-900 overflow-hidden">{reader}</div>
+
+      {/* Overlay to prevent iframe/selection issues while resizing */}
+      {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
+    </div>
+  );
+}
