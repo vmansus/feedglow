@@ -165,3 +165,27 @@ export function useGenerateTags() {
     },
   });
 }
+
+// P0: Ranked entries for "For You" page
+export function useRankedEntries() {
+  return useQuery({
+    queryKey: ['entries', 'ranked'],
+    queryFn: api.getRankedEntries,
+  });
+}
+
+// P0: Record read events for personalization
+export function useRecordReadEvent() {
+  return useMutation({
+    mutationFn: api.recordReadEvent,
+    // Silent - no toast
+  });
+}
+
+// P0: Record action events (bookmark, share, etc)
+export function useRecordActionEvent() {
+  return useMutation({
+    mutationFn: api.recordActionEvent,
+    // Silent - no toast
+  });
+}

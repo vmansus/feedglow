@@ -302,3 +302,63 @@ export async function importOpml(file: File): Promise<{ success: boolean; messag
 export async function healthCheck(): Promise<{ status: string; miniflux: string }> {
   return request('/health');
 }
+
+// ============ P0: Ranked Entries (For You) ============
+
+export interface RankedEntriesResponse {
+  entries: import('@feedglow/shared').Entry[];
+  total: number;
+  algorithm: string;
+}
+
+export async function getRankedEntries(): Promise<RankedEntriesResponse> {
+  return request<RankedEntriesResponse>('/api/entries/ranked');
+}
+
+// ============ P0: Read Events (Personalization) ============
+
+export interface ReadEvent {
+  entryId: number;
+  duration: number; // seconds
+  completed: boolean;
+  scrollDepth?: number; // 0-100
+}
+
+export async function recordReadEvent(event: ReadEvent): Promise<{ success: boolean }> {
+  return request('/api/events/read', {
+    method: 'POST',
+    body: JSON.stringify(event),
+  });
+}
+
+export interface ActionEvent {
+  entryId: number;
+  action: 'bookmark' | 'share' | 'like' | 'dislike';
+}
+
+export async function recordActionEvent(event: ActionEvent): Promise<{ success: boolean }> {
+  return request('/api/events/action', {
+    method: 'POST',
+    body: JSON.stringify(event),
+  });
+}
+
+// ============ P0: Chat (AI Q&A) ============
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  relatedEntries?: { id: number; title: string; relevance: number }[];
+}
+
+// Note: For streaming, use EventSource directly in the component
+export async function chatWithEntry(entryId: number, message: string, history?: ChatMessage[]): Promise<ChatResponse> {
+  return request(`/api/entries/${entryId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ message, history }),
+  });
+}

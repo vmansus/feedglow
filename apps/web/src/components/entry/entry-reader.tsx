@@ -12,11 +12,13 @@ import {
   FileText, 
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MessageCircle
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
+import { ChatPanel } from './chat-panel';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -28,6 +30,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const [showFullContent, setShowFullContent] = useState(false);
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
+  const [showChat, setShowChat] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const toggleBookmark = useToggleBookmark();
@@ -93,6 +96,18 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             )}
           >
             <Star className={cn("w-4 h-4", isStarred && "fill-current")} />
+          </button>
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              showChat
+                ? "text-orange-500 bg-orange-500/10"
+                : "text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
+            )}
+            title="Ask AI about this article"
+          >
+            <MessageCircle className="w-4 h-4" />
           </button>
           <a
             href={entry.url}
@@ -296,6 +311,9 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           )}
         </article>
       </div>
+
+      {/* Chat Panel */}
+      <ChatPanel entry={entry} isOpen={showChat} onClose={() => setShowChat(false)} />
     </motion.div>
   );
 }

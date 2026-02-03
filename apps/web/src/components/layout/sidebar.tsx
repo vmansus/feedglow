@@ -14,7 +14,8 @@ import {
   LogOut, 
   Search,
   Folder,
-  Inbox
+  Inbox,
+  Sparkles
 } from 'lucide-react';
 
 // Generate consistent color from string
@@ -58,6 +59,11 @@ export function Sidebar() {
         </Link>
 
         {/* Quick Nav */}
+        <NavIconButton
+          href="/for-you"
+          icon={<Sparkles className="w-5 h-5" />}
+          active={pathname === '/for-you'}
+        />
         <NavIconButton
           href="/unread"
           icon={<Inbox className="w-5 h-5" />}
