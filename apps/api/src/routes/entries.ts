@@ -5,7 +5,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { getMinifluxClient, type EntriesFilter } from '../lib/miniflux.js';
+import { createMinifluxClient, type EntriesFilter } from '../lib/miniflux.js';
+import { authMiddleware } from '../lib/auth.js';
 import {
   summarizeArticle,
   translateArticle,
@@ -14,6 +15,16 @@ import {
 } from '../services/ai.js';
 
 const entries = new Hono();
+
+// Apply auth middleware to all entries routes
+entries.use('*', authMiddleware);
+
+// Helper to get client from context
+function getClient(c: any) {
+  const minifluxUrl = c.get('minifluxUrl');
+  const minifluxApiKey = c.get('minifluxApiKey');
+  return createMinifluxClient({ baseUrl: minifluxUrl, apiKey: minifluxApiKey });
+}
 
 // List entries with filters
 entries.get('/', async (c) => {
@@ -29,7 +40,7 @@ entries.get('/', async (c) => {
     ? parseInt(c.req.query('feedId')!)
     : undefined;
 
-  const client = getMinifluxClient();
+  const client = getClient(c);
   
   // If feedId is specified, get entries for that specific feed
   if (feedId) {
@@ -61,7 +72,7 @@ entries.get('/', async (c) => {
 // Get single entry
 entries.get('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const entry = await client.getEntry(id);
   return c.json(entry);
 });
@@ -77,7 +88,7 @@ entries.put(
   zValidator('json', updateStatusSchema),
   async (c) => {
     const { entryIds, status } = c.req.valid('json');
-    const client = getMinifluxClient();
+    const client = getClient(c);
     await client.updateEntryStatus(entryIds, status);
     return c.json({ success: true });
   }
@@ -86,7 +97,7 @@ entries.put(
 // Mark single entry as read
 entries.post('/:id/read', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.updateEntryStatus([id], 'read');
   return c.json({ success: true });
 });
@@ -94,7 +105,7 @@ entries.post('/:id/read', async (c) => {
 // Mark single entry as unread
 entries.post('/:id/unread', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.updateEntryStatus([id], 'unread');
   return c.json({ success: true });
 });
@@ -102,7 +113,7 @@ entries.post('/:id/unread', async (c) => {
 // Toggle bookmark
 entries.post('/:id/bookmark', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.toggleEntryBookmark(id);
   return c.json({ success: true });
 });
@@ -112,7 +123,7 @@ entries.post('/:id/bookmark', async (c) => {
 // Generate AI summary for entry
 entries.post('/:id/summarize', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const entry = await client.getEntry(id);
 
   const config = getDefaultAIConfig();
@@ -136,7 +147,7 @@ entries.post(
     const id = parseInt(c.req.param('id'));
     const { language } = c.req.valid('json');
 
-    const client = getMinifluxClient();
+    const client = getClient(c);
     const entry = await client.getEntry(id);
 
     const config = getDefaultAIConfig();
@@ -153,7 +164,7 @@ entries.post(
 // Generate tags for entry
 entries.post('/:id/tags', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const entry = await client.getEntry(id);
 
   const config = getDefaultAIConfig();

@@ -5,13 +5,24 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { getMinifluxClient } from '../lib/miniflux.js';
+import { createMinifluxClient } from '../lib/miniflux.js';
+import { authMiddleware } from '../lib/auth.js';
 
 const feeds = new Hono();
 
+// Apply auth middleware to all feeds routes
+feeds.use('*', authMiddleware);
+
+// Helper to get client from context
+function getClient(c: any) {
+  const minifluxUrl = c.get('minifluxUrl');
+  const minifluxApiKey = c.get('minifluxApiKey');
+  return createMinifluxClient({ baseUrl: minifluxUrl, apiKey: minifluxApiKey });
+}
+
 // List all feeds
 feeds.get('/', async (c) => {
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const feedList = await client.getFeeds();
   return c.json(feedList);
 });
@@ -19,7 +30,7 @@ feeds.get('/', async (c) => {
 // Get single feed
 feeds.get('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const feed = await client.getFeed(id);
   return c.json(feed);
 });
@@ -35,7 +46,7 @@ feeds.post(
   zValidator('json', createFeedSchema),
   async (c) => {
     const { url, categoryId } = c.req.valid('json');
-    const client = getMinifluxClient();
+    const client = getClient(c);
     const feed = await client.createFeed(url, categoryId);
     return c.json(feed, 201);
   }
@@ -55,7 +66,7 @@ feeds.patch(
   async (c) => {
     const id = parseInt(c.req.param('id'));
     const updates = c.req.valid('json');
-    const client = getMinifluxClient();
+    const client = getClient(c);
     const feed = await client.updateFeed(id, {
       title: updates.title,
       category_id: updates.categoryId,
@@ -69,7 +80,7 @@ feeds.patch(
 // Delete feed (unsubscribe)
 feeds.delete('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.deleteFeed(id);
   return c.json({ success: true });
 });
@@ -77,14 +88,14 @@ feeds.delete('/:id', async (c) => {
 // Refresh feed
 feeds.post('/:id/refresh', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.refreshFeed(id);
   return c.json({ success: true });
 });
 
 // Refresh all feeds
 feeds.post('/refresh', async (c) => {
-  const client = getMinifluxClient();
+  const client = getClient(c);
   await client.refreshAllFeeds();
   return c.json({ success: true });
 });
@@ -99,7 +110,7 @@ feeds.post(
   zValidator('json', discoverSchema),
   async (c) => {
     const { url } = c.req.valid('json');
-    const client = getMinifluxClient();
+    const client = getClient(c);
     const feeds = await client.discoverFeeds(url);
     return c.json({ feeds });
   }
@@ -112,7 +123,7 @@ feeds.get('/:id/entries', async (c) => {
   const limit = parseInt(c.req.query('limit') || '50');
   const offset = parseInt(c.req.query('offset') || '0');
 
-  const client = getMinifluxClient();
+  const client = getClient(c);
   const entries = await client.getFeedEntries(id, {
     status,
     limit,

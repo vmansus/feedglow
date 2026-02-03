@@ -285,11 +285,15 @@ export class MinifluxClient {
   }
 }
 
-// Singleton instance
-let client: MinifluxClient | null = null;
+// Singleton instance (for backward compatibility / webhook etc)
+let defaultClient: MinifluxClient | null = null;
 
+/**
+ * Get default Miniflux client from environment variables
+ * Used for webhooks and unauthenticated endpoints
+ */
 export function getMinifluxClient(): MinifluxClient {
-  if (!client) {
+  if (!defaultClient) {
     const baseUrl = process.env.MINIFLUX_URL;
     const apiKey = process.env.MINIFLUX_API_KEY;
 
@@ -299,7 +303,14 @@ export function getMinifluxClient(): MinifluxClient {
       );
     }
 
-    client = new MinifluxClient({ baseUrl, apiKey });
+    defaultClient = new MinifluxClient({ baseUrl, apiKey });
   }
-  return client;
+  return defaultClient;
+}
+
+/**
+ * Create Miniflux client from user credentials (from JWT context)
+ */
+export function createMinifluxClient(config: MinifluxConfig): MinifluxClient {
+  return new MinifluxClient(config);
 }
