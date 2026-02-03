@@ -1,0 +1,54 @@
+name: Deploy FeedGlow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/feedglow
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+            
+            # Install deps
+            pnpm install --frozen-lockfile || npm install -g pnpm && pnpm install
+            
+            # Build
+            pnpm --filter @feedglow/shared build
+            pnpm --filter @feedglow/ui build  
+            pnpm --filter @feedglow/api build
+            pnpm --filter @feedglow/web build
+            
+            # Restart with PM2
+            pm2 restart feedglow-api 2>/dev/null || \
+              MINIFLUX_URL=http://localhost:8080 \
+              MINIFLUX_API_KEY=$(grep MINIFLUX_API_KEY ~/feedglow/docker/.env | cut -d= -f2) \
+              PORT=3001 \
+              pm2 start apps/api/dist/index.js --name feedglow-api
+            
+            pm2 restart feedglow-web 2>/dev/null || \
+              NEXT_PUBLIC_API_URL=http://localhost:3001 \
+              PORT=3000 \
+              pm2 start npm --name feedglow-web -- --prefix apps/web start
+            
+            pm2 save
+            echo "✅ Deployed!"
+
+      - name: Health Check
+        run: |
+          sleep 15
+          curl -sf http://${{ secrets.DEPLOY_HOST }}:3001/health && echo "API OK" || echo "API check failed"
