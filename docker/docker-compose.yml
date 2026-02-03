@@ -74,6 +74,25 @@ services:
     ports:
       - "3000:3000"
 
+  # Ollama (Optional - local AI)
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    profiles:
+      - local-ai
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
   # RSSHub (Optional - extended subscriptions)
   rsshub:
     image: diygod/rsshub:chromium-bundled
@@ -89,6 +108,7 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:
 
 networks:
   default:

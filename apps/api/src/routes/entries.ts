@@ -19,6 +19,8 @@ import {
   ContentExtractionError,
 } from '../services/readability.js';
 import { extractThumbnail, extractAllImages } from '../services/thumbnail.js';
+import { getFeedScores, calculateEntryScore } from '../services/user-events.js';
+import { chatWithArticle, indexEntry, semanticSearch } from '../services/chat.js';
 
 const entries = new Hono();
 
@@ -249,6 +251,118 @@ entries.get('/:id/images', async (c) => {
     entryId: id,
     images,
     count: images.length,
+  });
+});
+
+// ============ AI Chat ============
+
+// Chat with an article
+const chatSchema = z.object({
+  message: z.string().min(1).max(1000),
+  history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).optional().default([]),
+});
+
+entries.post(
+  '/:id/chat',
+  zValidator('json', chatSchema),
+  async (c) => {
+    const id = parseInt(c.req.param('id'));
+    const { message, history } = c.req.valid('json');
+    const user = c.get('user') as JWTPayload;
+
+    const client = getClient(c);
+    const entry = await client.getEntry(id);
+
+    // Index entry for future searches
+    await indexEntry(entry, user.userId);
+
+    const result = await chatWithArticle(entry, message, user.userId, history);
+
+    return c.json({
+      entryId: id,
+      ...result,
+    });
+  }
+);
+
+// Index an entry for semantic search
+entries.post('/:id/index', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const user = c.get('user') as JWTPayload;
+
+  const client = getClient(c);
+  const entry = await client.getEntry(id);
+
+  await indexEntry(entry, user.userId);
+
+  return c.json({ success: true, entryId: id });
+});
+
+// ============ Semantic Search ============
+
+// Search entries semantically
+entries.get('/search/semantic', async (c) => {
+  const query = c.req.query('q');
+  const limit = parseInt(c.req.query('limit') || '10');
+  const user = c.get('user') as JWTPayload;
+
+  if (!query) {
+    return c.json({ error: 'Query parameter q is required' }, 400);
+  }
+
+  const results = await semanticSearch(query, user.userId, limit);
+
+  return c.json({
+    query,
+    results,
+  });
+});
+
+// ============ Smart Ranking ============
+
+// Get ranked entries (For You feed)
+entries.get('/ranked', async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+
+  const client = getClient(c);
+
+  // Get unread entries
+  const result = await client.getEntries({
+    status: 'unread',
+    limit: Math.min(limit * 3, 200), // Fetch more to rank
+    offset: 0,
+    order: 'published_at',
+    direction: 'desc',
+  });
+
+  // Get user's feed engagement scores
+  const feedScores = await getFeedScores(user.userId);
+
+  // Calculate scores and sort
+  const rankedEntries = result.entries
+    .map((entry) => ({
+      ...entry,
+      _score: calculateEntryScore(
+        {
+          id: entry.id,
+          feedId: entry.feed_id,
+          publishedAt: entry.published_at,
+          readingTime: entry.reading_time,
+        },
+        feedScores
+      ),
+    }))
+    .sort((a, b) => b._score - a._score)
+    .slice(offset, offset + limit);
+
+  return c.json({
+    total: result.total,
+    entries: rankedEntries,
   });
 });
 

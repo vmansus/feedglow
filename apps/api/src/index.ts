@@ -18,6 +18,7 @@ import webhook from './routes/webhook.js';
 import auth from './routes/auth.js';
 import settings from './routes/settings.js';
 import opml from './routes/opml.js';
+import events from './routes/events.js';
 
 const app = new Hono();
 
@@ -97,6 +98,7 @@ app.route('/api/feeds', feeds);
 app.route('/api/entries', entries);
 app.route('/api/categories', categories);
 app.route('/api/opml', opml);
+app.route('/api/events', events);
 app.route('/api/webhook', webhook);
 
 // Error handler
