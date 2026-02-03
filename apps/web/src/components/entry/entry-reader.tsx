@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
 import type { Entry } from '@feedglow/shared';
@@ -12,9 +12,15 @@ interface EntryReaderProps {
 
 export function EntryReader({ entry }: EntryReaderProps) {
   const [showTranslation, setShowTranslation] = useState(false);
+  const [isStarred, setIsStarred] = useState(entry.starred);
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
   const translate = useTranslate();
+
+  // Sync local state when entry changes (e.g., selecting a different article)
+  useEffect(() => {
+    setIsStarred(entry.starred);
+  }, [entry.id, entry.starred]);
 
   const handleSummarize = () => {
     summarize.mutate(entry.id);
@@ -46,15 +52,18 @@ export function EntryReader({ entry }: EntryReaderProps) {
       {/* Action bar */}
       <div className="flex items-center gap-2 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
         <button
-          onClick={() => toggleBookmark.mutate(entry.id)}
+          onClick={() => {
+            setIsStarred(!isStarred); // Immediate UI update
+            toggleBookmark.mutate(entry.id);
+          }}
           className={cn(
             'px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors',
-            entry.starred
+            isStarred
               ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
               : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
           )}
         >
-          {entry.starred ? '★ Starred' : '☆ Star'}
+          {isStarred ? '★ Starred' : '☆ Star'}
         </button>
 
         <button
