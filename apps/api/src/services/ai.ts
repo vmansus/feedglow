@@ -130,7 +130,7 @@ Respond in JSON format:
   });
 
   try {
-    const parsed = JSON.parse(result.text);
+    const parsed = JSON.parse(extractJson(result.text));
     return {
       summary: parsed.summary,
       keyPoints: parsed.keyPoints,
@@ -188,7 +188,7 @@ Respond in JSON format:
   });
 
   try {
-    const parsed = JSON.parse(result.text);
+    const parsed = JSON.parse(extractJson(result.text));
     return {
       title: parsed.title,
       content: parsed.content,
@@ -237,7 +237,7 @@ Respond with a JSON array of tags:
   });
 
   try {
-    return JSON.parse(result.text);
+    return JSON.parse(extractJson(result.text));
   } catch {
     return [];
   }
@@ -253,6 +253,25 @@ function stripHtml(html: string): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Extract JSON from text that might be wrapped in markdown code blocks
+ */
+function extractJson(text: string): string {
+  // Try to extract from ```json ... ``` or ``` ... ```
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
+  }
+  
+  // Try to find JSON object or array directly
+  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) {
+    return jsonMatch[1];
+  }
+  
+  return text;
 }
 
 // Default config from environment
