@@ -137,9 +137,9 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
               whileTap={{ scale: 0.98 }}
               onClick={handleSummarize}
               disabled={summarize.isPending}
-              className="px-3 py-1.5 rounded-lg text-sm bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 flex items-center gap-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              {summarize.isPending ? '⏳' : '🤖'} AI Summary
+              {summarize.isPending ? '⏳' : '✨'} AI Summary
             </motion.button>
 
             <motion.button
@@ -147,7 +147,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
               whileTap={{ scale: 0.98 }}
               onClick={handleTranslate}
               disabled={translate.isPending}
-              className="px-3 py-1.5 rounded-lg text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-2 hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               {translate.isPending ? '⏳' : '🌐'} Translate
             </motion.button>
@@ -157,7 +157,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
               whileTap={{ scale: 0.98 }}
               onClick={() => fetchFullContent.mutate(entry.id)}
               disabled={fetchFullContent.isPending || !!fetchFullContent.data}
-              className="px-3 py-1.5 rounded-lg text-sm bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 flex items-center gap-2 hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               {fetchFullContent.isPending ? '⏳' : '📄'} {fetchFullContent.data ? 'Fetched' : 'Full Article'}
             </motion.button>
@@ -205,9 +205,9 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
               <button
                 onClick={() => setShowTranslation(!showTranslation)}
-                className="text-sm text-blue-600 hover:underline mb-2"
+                className="text-sm text-orange-600 dark:text-orange-400 hover:underline mb-2"
               >
-                {showTranslation ? '🔼 Hide translation' : '🔽 Show translation'}
+                {showTranslation ? '▲ Hide translation' : '▼ Show translation'}
               </button>
               {showTranslation && (
                 <motion.div 
@@ -237,9 +237,9 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
               <button
                 onClick={() => setShowFullContent(!showFullContent)}
-                className="text-sm text-green-600 hover:underline mb-2 flex items-center gap-1"
+                className="text-sm text-orange-600 dark:text-orange-400 hover:underline mb-2 flex items-center gap-1"
               >
-                {showFullContent ? '🔼 Show RSS content' : '🔽 Show full article'}
+                {showFullContent ? '▲ Show RSS content' : '▼ Show full article'}
                 {fetchFullContent.data.cached && <span className="text-gray-400">(cached)</span>}
               </button>
               {showFullContent && (
