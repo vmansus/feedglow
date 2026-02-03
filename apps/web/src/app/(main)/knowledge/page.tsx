@@ -81,13 +81,13 @@ export default function KnowledgePage() {
     ],
   };
 
-  const data = graphData || demoData;
+  const data = (graphData?.nodes?.length ? graphData : null) || demoData;
 
   // Simple force-directed layout simulation
   const [nodes, setNodes] = useState<GraphNode[]>([]);
 
   useEffect(() => {
-    if (!data.nodes.length) return;
+    if (!data?.nodes?.length) return;
 
     // Initialize positions
     const initializedNodes = data.nodes.map((node, i) => ({
