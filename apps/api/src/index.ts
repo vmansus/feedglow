@@ -1,49 +1,114 @@
+/**
+ * FeedGlow API Server
+ * Lightweight AI-enhanced RSS reader backend
+ */
+
+import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { prettyJSON } from 'hono/pretty-json';
+import { getMinifluxClient } from './lib/miniflux.js';
+
+// Routes
+import feeds from './routes/feeds.js';
+import entries from './routes/entries.js';
+import categories from './routes/categories.js';
+import webhook from './routes/webhook.js';
 
 const app = new Hono();
 
 // Middleware
 app.use('*', logger());
-app.use('*', cors());
+app.use('*', prettyJSON());
+app.use(
+  '*',
+  cors({
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    credentials: true,
+  })
+);
 
 // Health check
-app.get('/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', async (c) => {
+  try {
+    const client = getMinifluxClient();
+    const health = await client.healthcheck();
+    return c.json({
+      status: 'ok',
+      miniflux: health,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    return c.json(
+      {
+        status: 'error',
+        miniflux: 'unreachable',
+        error: err instanceof Error ? err.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
+      503
+    );
+  }
 });
 
-// API routes (to be implemented by Chad)
-app.get('/api/v1/feeds', (c) => {
-  // TODO: Implement Miniflux integration
-  return c.json({ feeds: [], total: 0 });
+// API info
+app.get('/', (c) => {
+  return c.json({
+    name: 'FeedGlow API',
+    version: '0.1.0',
+    endpoints: {
+      health: 'GET /health',
+      feeds: 'GET /api/feeds',
+      entries: 'GET /api/entries',
+      categories: 'GET /api/categories',
+      webhook: 'POST /api/webhook/miniflux',
+    },
+  });
 });
 
-app.get('/api/v1/entries', (c) => {
-  // TODO: Implement Miniflux integration
-  return c.json({ entries: [], total: 0 });
+// Mount routes
+app.route('/api/feeds', feeds);
+app.route('/api/entries', entries);
+app.route('/api/categories', categories);
+app.route('/api/webhook', webhook);
+
+// Error handler
+app.onError((err, c) => {
+  console.error(`[Error] ${err.message}`);
+  return c.json(
+    {
+      error: err.message,
+      status: 'error',
+    },
+    500
+  );
 });
 
-app.post('/api/v1/ai/summarize', (c) => {
-  // TODO: Implement AI summarization
-  return c.json({ error: 'Not implemented' }, 501);
+// 404 handler
+app.notFound((c) => {
+  return c.json(
+    {
+      error: 'Not Found',
+      path: c.req.path,
+    },
+    404
+  );
 });
 
-app.post('/api/v1/ai/translate', (c) => {
-  // TODO: Implement AI translation
-  return c.json({ error: 'Not implemented' }, 501);
-});
+// Start server
+const port = parseInt(process.env.PORT || '3001');
 
-// Miniflux webhook receiver
-app.post('/api/webhook/miniflux', (c) => {
-  // TODO: Handle Miniflux webhook
-  return c.json({ received: true });
-});
+console.log(`
+🌟 FeedGlow API Server
+━━━━━━━━━━━━━━━━━━━━━━
+Port: ${port}
+Miniflux: ${process.env.MINIFLUX_URL || 'Not configured'}
+AI Provider: ${process.env.AI_PROVIDER || 'openai'}
+━━━━━━━━━━━━━━━━━━━━━━
+`);
 
-const port = process.env.PORT || 3001;
-console.log(`🚀 FeedGlow API running on port ${port}`);
-
-export default {
-  port,
+serve({
   fetch: app.fetch,
-};
+  port,
+});

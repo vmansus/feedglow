@@ -1,0 +1,151 @@
+/**
+ * Entries API Routes
+ */
+
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { getMinifluxClient, type EntriesFilter } from '../lib/miniflux.js';
+import {
+  summarizeArticle,
+  translateArticle,
+  generateTags,
+  getDefaultAIConfig,
+} from '../services/ai.js';
+
+const entries = new Hono();
+
+// List entries with filters
+entries.get('/', async (c) => {
+  const status = c.req.query('status') as EntriesFilter['status'];
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+  const starred = c.req.query('starred') === 'true';
+  const search = c.req.query('search');
+  const categoryId = c.req.query('categoryId')
+    ? parseInt(c.req.query('categoryId')!)
+    : undefined;
+
+  const client = getMinifluxClient();
+  const result = await client.getEntries({
+    status,
+    limit,
+    offset,
+    starred: starred || undefined,
+    search,
+    category_id: categoryId,
+    order: 'published_at',
+    direction: 'desc',
+  });
+
+  return c.json(result);
+});
+
+// Get single entry
+entries.get('/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  const entry = await client.getEntry(id);
+  return c.json(entry);
+});
+
+// Update entry status
+const updateStatusSchema = z.object({
+  entryIds: z.array(z.number()),
+  status: z.enum(['read', 'unread']),
+});
+
+entries.put(
+  '/status',
+  zValidator('json', updateStatusSchema),
+  async (c) => {
+    const { entryIds, status } = c.req.valid('json');
+    const client = getMinifluxClient();
+    await client.updateEntryStatus(entryIds, status);
+    return c.json({ success: true });
+  }
+);
+
+// Mark single entry as read
+entries.post('/:id/read', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  await client.updateEntryStatus([id], 'read');
+  return c.json({ success: true });
+});
+
+// Mark single entry as unread
+entries.post('/:id/unread', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  await client.updateEntryStatus([id], 'unread');
+  return c.json({ success: true });
+});
+
+// Toggle bookmark
+entries.post('/:id/bookmark', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  await client.toggleEntryBookmark(id);
+  return c.json({ success: true });
+});
+
+// ============ AI Features ============
+
+// Generate AI summary for entry
+entries.post('/:id/summarize', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  const entry = await client.getEntry(id);
+
+  const config = getDefaultAIConfig();
+  const summary = await summarizeArticle(entry, config);
+
+  return c.json({
+    entryId: id,
+    ...summary,
+  });
+});
+
+// Translate entry
+const translateSchema = z.object({
+  language: z.string().default('zh-CN'),
+});
+
+entries.post(
+  '/:id/translate',
+  zValidator('json', translateSchema),
+  async (c) => {
+    const id = parseInt(c.req.param('id'));
+    const { language } = c.req.valid('json');
+
+    const client = getMinifluxClient();
+    const entry = await client.getEntry(id);
+
+    const config = getDefaultAIConfig();
+    const translation = await translateArticle(entry, language, config);
+
+    return c.json({
+      entryId: id,
+      originalTitle: entry.title,
+      ...translation,
+    });
+  }
+);
+
+// Generate tags for entry
+entries.post('/:id/tags', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  const entry = await client.getEntry(id);
+
+  const config = getDefaultAIConfig();
+  const tags = await generateTags(entry, config);
+
+  return c.json({
+    entryId: id,
+    tags,
+  });
+});
+
+export default entries;

@@ -1,98 +1,89 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database (shared by Miniflux and FeedGlow)
   postgres:
     image: postgres:17-alpine
-    container_name: feedglow-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: feedglow
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-feedglow_dev}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: feedglow
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'feedglow']
+      test: ["CMD", "pg_isready", "-U", "feedglow"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - feedglow
 
   # Miniflux RSS Engine
   miniflux:
     image: miniflux/miniflux:latest
-    container_name: feedglow-miniflux
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://feedglow:${DB_PASSWORD:-feedglow_dev}@postgres/feedglow?sslmode=disable
+      DATABASE_URL: postgres://feedglow:${DB_PASSWORD}@postgres/feedglow?sslmode=disable
       RUN_MIGRATIONS: 1
       CREATE_ADMIN: 1
-      ADMIN_USERNAME: ${MINIFLUX_ADMIN:-admin}
-      ADMIN_PASSWORD: ${MINIFLUX_PASSWORD:-feedglow_admin}
+      ADMIN_USERNAME: ${MINIFLUX_ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
       POLLING_FREQUENCY: 15
       BATCH_SIZE: 10
-      WORKER_POOL_SIZE: 5
-      WEBHOOK_URL: http://api:3001/api/webhook/miniflux
+      POLLING_SCHEDULER: entry_frequency
+      SCHEDULER_ENTRY_FREQUENCY_MAX_INTERVAL: 1440
+      WEBHOOK_URL: http://feedglow:3001/api/webhook/miniflux
     ports:
-      - '8080:8080'
-    networks:
-      - feedglow
+      - "8080:8080"
 
-  # FeedGlow API
-  api:
+  # FeedGlow API Server
+  feedglow:
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
-    container_name: feedglow-api
+    restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
-      miniflux:
-        condition: service_started
+      - postgres
+      - miniflux
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgres://feedglow:${DB_PASSWORD:-feedglow_dev}@postgres/feedglow
+      DATABASE_URL: postgres://feedglow:${DB_PASSWORD}@postgres/feedglow
       MINIFLUX_URL: http://miniflux:8080
       MINIFLUX_API_KEY: ${MINIFLUX_API_KEY}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AUTO_SUMMARIZE: ${AUTO_SUMMARIZE:-false}
     ports:
-      - '3001:3001'
-    networks:
-      - feedglow
+      - "3001:3001"
 
-  # FeedGlow Web
+  # FeedGlow Web App (Next.js)
   web:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
-    container_name: feedglow-web
+    restart: unless-stopped
     depends_on:
-      - api
+      - feedglow
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://feedglow:3001
     ports:
-      - '3000:3000'
-    networks:
-      - feedglow
+      - "3000:3000"
 
-  # RSSHub (Optional)
+  # RSSHub (Optional - extended subscriptions)
   rsshub:
     image: diygod/rsshub:chromium-bundled
-    container_name: feedglow-rsshub
+    restart: unless-stopped
     environment:
       NODE_ENV: production
       CACHE_TYPE: memory
       CACHE_EXPIRE: 300
     ports:
-      - '1200:1200'
-    networks:
-      - feedglow
+      - "1200:1200"
     profiles:
       - extended
 
@@ -100,5 +91,5 @@ volumes:
   postgres_data:
 
 networks:
-  feedglow:
-    driver: bridge
+  default:
+    name: feedglow
