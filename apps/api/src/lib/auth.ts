@@ -30,9 +30,12 @@ export async function generateToken(payload: Omit<JWTPayload, 'exp'>): Promise<s
  */
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
+    console.log('[Auth] Verifying token with secret:', JWT_SECRET.substring(0, 10) + '...');
     const payload = await verify(token, JWT_SECRET);
+    console.log('[Auth] Token verified successfully:', payload);
     return payload as JWTPayload;
-  } catch {
+  } catch (err) {
+    console.error('[Auth] Token verification failed:', err);
     return null;
   }
 }
