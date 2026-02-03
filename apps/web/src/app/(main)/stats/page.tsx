@@ -63,7 +63,7 @@ export default function StatsPage() {
   });
 
   // Default data for development/demo
-  const stats: StatsSummary = summary || {
+  const defaultStats: StatsSummary = {
     totalRead: 247,
     totalTime: 1840,
     currentStreak: 7,
@@ -72,6 +72,7 @@ export default function StatsPage() {
     articlesLastWeek: 28,
     averagePerDay: 4.5,
   };
+  const stats: StatsSummary = summary?.totalRead !== undefined ? summary : defaultStats;
 
   const topicData: TopicStats[] = topics?.topics || [
     { topic: 'Technology', count: 89, percentage: 36 },
