@@ -140,14 +140,17 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30"
-              style={{ boxShadow: '0 0 30px rgba(249, 115, 22, 0.2), 0 0 60px rgba(249, 115, 22, 0.1)' }}
+              className="mb-8 p-5 rounded-2xl border border-orange-500/40"
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%)',
+                boxShadow: '0 0 40px rgba(249, 115, 22, 0.25), 0 0 80px rgba(249, 115, 22, 0.1), inset 0 1px 0 rgba(255,255,255,0.1)' 
+              }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-orange-400" />
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-medium text-orange-400">AI Summary</span>
+                <span className="font-semibold text-orange-400 text-lg">AI Summary</span>
               </div>
               <p className="text-secondary text-sm leading-relaxed">
                 {summarize.data?.summary || entry.summary}
@@ -165,14 +168,17 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             </motion.div>
           ) : (
             <div 
-              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/20"
-              style={{ boxShadow: '0 0 20px rgba(249, 115, 22, 0.1)' }}
+              className="mb-8 p-5 rounded-2xl border border-orange-500/30"
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.03) 100%)',
+                boxShadow: '0 0 30px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)' 
+              }}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-orange-400" />
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500/50 to-orange-600/50 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-orange-300" />
                 </div>
-                <span className="font-medium text-orange-400/80">AI Summary</span>
+                <span className="font-semibold text-orange-400 text-lg">AI Summary</span>
               </div>
               <button
                 onClick={() => summarize.mutate(entry.id)}

@@ -6,9 +6,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   ArrowLeft, 
-  RefreshCw, 
-  Trash2, 
-  ExternalLink,
+  RefreshCw,
   CheckCheck 
 } from 'lucide-react';
 import { useFeed, useDeleteFeed, useRefreshFeed, useEntries, useKeyboardNavigation, useToggleBookmark, useMarkAsRead, useMarkAsUnread, useUpdateEntriesStatus } from '@/hooks';
@@ -88,67 +86,43 @@ export default function FeedDetailPage() {
   const listHeader = feedLoading ? (
     <FeedHeaderSkeleton />
   ) : (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 space-y-2">
-      {/* Row 1: Back + Title */}
-      <div className="flex items-center gap-2">
-        <Link
-          href="/feeds"
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors flex-shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-400" />
-        </Link>
-        <h1 className="font-semibold truncate dark:text-white text-sm">{feed?.title}</h1>
-      </div>
-
-      {/* Row 2: Stats */}
-      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>{feed?.unreadCount || 0} unread</span>
-        <span>•</span>
-        <span>{entriesData?.total ?? entries.length} total</span>
-      </div>
-
-      {/* Row 3: Actions */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <button
-          onClick={handleRefresh}
-          disabled={refreshFeed.isPending}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-        
-        {feed?.siteUrl && (
-          <a
-            href={feed.siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-default">
+      {/* Title row with actions */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link
+            href="/feeds"
+            className="p-1 hover:bg-[rgb(var(--bg-hover))] rounded transition-colors flex-shrink-0"
           >
-            <ExternalLink className="w-3 h-3" />
-            Visit
-          </a>
-        )}
-
-        {entries.length > 0 && (
+            <ArrowLeft className="w-4 h-4 text-muted" />
+          </Link>
+          <h1 className="font-semibold truncate text-[rgb(var(--text-primary))]">{feed?.title}</h1>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
-            onClick={handleMarkAllRead}
-            disabled={updateEntriesStatus.isPending}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors disabled:opacity-50"
-            title="Mark all as read"
+            onClick={handleRefresh}
+            disabled={refreshFeed.isPending}
+            className="p-2 text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh"
           >
-            <CheckCheck className="w-3 h-3" />
-            Read all
+            <RefreshCw className={`w-4 h-4 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
           </button>
-        )}
-
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors ml-auto"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+          {entries.length > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              disabled={updateEntriesStatus.isPending}
+              className="p-2 text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] rounded-lg transition-colors disabled:opacity-50"
+              title="Mark all as read"
+            >
+              <CheckCheck className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
+      {/* Stats */}
+      <p className="text-sm text-muted pl-7">
+        {feed?.unreadCount || 0} unread • {entriesData?.total ?? entries.length} total
+      </p>
     </motion.div>
   );
 
