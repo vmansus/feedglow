@@ -13,7 +13,6 @@ export function AISettings() {
   const [testing, setTesting] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   
-  // Form state
   const [provider, setProvider] = useState<AIProvider>('openai');
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -34,7 +33,7 @@ export function AISettings() {
       setModel(data.model || '');
       setEnableSummary(data.enableSummary);
       setEnableTranslation(data.enableTranslation);
-      setApiKey(''); // Don't show actual key
+      setApiKey('');
     } catch {
       toast.error('Failed to load AI settings');
     } finally {
@@ -53,14 +52,13 @@ export function AISettings() {
         enableTranslation,
       };
       
-      // Only send API key if user entered a new one
       if (apiKey) {
         updates.apiKey = apiKey;
       }
       
       const result = await api.updateAISettings(updates);
       setSettings(result.settings as AISettingsResponse);
-      setApiKey(''); // Clear input after save
+      setApiKey('');
       toast.success('AI settings saved!');
     } catch {
       toast.error('Failed to save settings');
@@ -108,10 +106,10 @@ export function AISettings() {
 
   if (loading) {
     return (
-      <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <section className="surface-elevated rounded-xl border border-default p-6">
         <div className="flex items-center gap-2">
           <RefreshCw className="w-5 h-5 animate-spin text-orange-500" />
-          <span className="text-gray-600 dark:text-gray-400">Loading AI settings...</span>
+          <span className="text-secondary">Loading AI settings...</span>
         </div>
       </section>
     );
@@ -122,16 +120,16 @@ export function AISettings() {
   const needsBaseUrl = currentProvider?.needsBaseUrl ?? false;
 
   return (
-    <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <section className="surface-elevated rounded-xl border border-default p-6">
       <div className="flex items-center gap-2 mb-4">
         <Bot className="w-5 h-5 text-orange-500" />
-        <h2 className="text-lg font-semibold dark:text-white">AI Configuration</h2>
+        <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">AI Configuration</h2>
       </div>
 
       <div className="space-y-4">
         {/* Provider Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-secondary mb-2">
             AI Provider
           </label>
           <select
@@ -139,11 +137,10 @@ export function AISettings() {
             onChange={(e) => {
               const newProvider = e.target.value as AIProvider;
               setProvider(newProvider);
-              // Reset to defaults for new provider
               setBaseUrl(settings?.defaultBaseUrls[newProvider] || '');
               setModel(settings?.defaultModels[newProvider] || '');
             }}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
             {settings?.availableProviders.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -154,7 +151,7 @@ export function AISettings() {
         {/* API Key */}
         {needsApiKey && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-secondary mb-2">
               <Key className="w-4 h-4 inline mr-1" />
               API Key
             </label>
@@ -165,12 +162,12 @@ export function AISettings() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder={settings?.hasApiKey ? settings.apiKeyMasked : 'Enter API key...'}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 pr-10 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-[rgb(var(--text-primary))]"
                 >
                   {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -179,7 +176,7 @@ export function AISettings() {
                 <button
                   onClick={handleClearApiKey}
                   disabled={saving}
-                  className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="px-3 py-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                   title="Remove API key"
                 >
                   <X className="w-4 h-4" />
@@ -187,7 +184,7 @@ export function AISettings() {
               )}
             </div>
             {settings?.hasApiKey && !apiKey && (
-              <p className="mt-1 text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+              <p className="mt-1 text-sm text-green-500 flex items-center gap-1">
                 <Check className="w-3 h-3" /> API key configured
               </p>
             )}
@@ -197,7 +194,7 @@ export function AISettings() {
         {/* Base URL */}
         {(needsBaseUrl || provider === 'custom') && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-secondary mb-2">
               <Server className="w-4 h-4 inline mr-1" />
               Base URL
             </label>
@@ -206,14 +203,14 @@ export function AISettings() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder={settings?.defaultBaseUrls[provider] || 'https://api.example.com/v1'}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
         )}
 
         {/* Model */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-secondary mb-2">
             Model (optional)
           </label>
           <input
@@ -221,9 +218,9 @@ export function AISettings() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder={settings?.defaultModels[provider] || 'gpt-4o-mini'}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-muted">
             Leave empty to use default: {settings?.defaultModels[provider]}
           </p>
         </div>
@@ -232,17 +229,17 @@ export function AISettings() {
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-medium text-secondary">
                 Enable AI Summaries
               </label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted">
                 Generate summaries for articles
               </p>
             </div>
             <button
               onClick={() => setEnableSummary(!enableSummary)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                enableSummary ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                enableSummary ? 'bg-orange-500' : 'bg-[rgb(var(--bg-active))]'
               }`}
             >
               <span
@@ -255,17 +252,17 @@ export function AISettings() {
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="text-sm font-medium text-secondary">
                 Enable AI Translation
               </label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted">
                 Translate articles to your language
               </p>
             </div>
             <button
               onClick={() => setEnableTranslation(!enableTranslation)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                enableTranslation ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                enableTranslation ? 'bg-orange-500' : 'bg-[rgb(var(--bg-active))]'
               }`}
             >
               <span
@@ -278,11 +275,11 @@ export function AISettings() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-2 pt-4 border-t border-default">
           <button
             onClick={handleTest}
             disabled={testing || (needsApiKey && !settings?.hasApiKey && !apiKey)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-default rounded-lg text-secondary hover:bg-[rgb(var(--bg-hover))] disabled:opacity-50 transition-colors"
           >
             {testing ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
