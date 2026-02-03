@@ -23,7 +23,9 @@ export function EntryReader({ entry }: EntryReaderProps) {
   useEffect(() => {
     setIsStarred(entry.starred);
     setShowFullContent(false);
+    setShowTranslation(false);
     fetchFullContent.reset();
+    translate.reset();
   }, [entry.id, entry.starred]);
 
   const handleSummarize = () => {
@@ -31,7 +33,9 @@ export function EntryReader({ entry }: EntryReaderProps) {
   };
 
   const handleTranslate = () => {
-    translate.mutate({ id: entry.id, language: 'zh-CN' });
+    translate.mutate({ id: entry.id, language: 'zh-CN' }, {
+      onSuccess: () => setShowTranslation(true),
+    });
   };
 
   return (
