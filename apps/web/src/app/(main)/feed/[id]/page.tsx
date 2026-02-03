@@ -8,8 +8,7 @@ import {
   ArrowLeft, 
   RefreshCw, 
   Trash2, 
-  ExternalLink, 
-  Rss,
+  ExternalLink,
   CheckCheck 
 } from 'lucide-react';
 import { useFeed, useDeleteFeed, useRefreshFeed, useEntries, useKeyboardNavigation, useToggleBookmark, useMarkAsRead, useMarkAsUnread, useUpdateEntriesStatus } from '@/hooks';
@@ -89,87 +88,66 @@ export default function FeedDetailPage() {
   const listHeader = feedLoading ? (
     <FeedHeaderSkeleton />
   ) : (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4">
-      {/* Feed info */}
-      <div className="flex items-center gap-3 mb-3">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 space-y-2">
+      {/* Row 1: Back + Title */}
+      <div className="flex items-center gap-2">
         <Link
           href="/feeds"
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors flex-shrink-0"
         >
-          <ArrowLeft className="w-4 h-4 text-gray-500" />
+          <ArrowLeft className="w-4 h-4 text-gray-400" />
         </Link>
-        {feed?.iconUrl ? (
-          <img src={feed.iconUrl} alt="" className="w-8 h-8 rounded" />
-        ) : (
-          <Rss className="w-8 h-8 text-gray-300" />
-        )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold truncate dark:text-white">{feed?.title}</h1>
-          <p className="text-xs text-gray-500 truncate">{feed?.siteUrl || feed?.feedUrl}</p>
-        </div>
+        <h1 className="font-semibold truncate dark:text-white text-sm">{feed?.title}</h1>
       </div>
 
-      {/* Stats */}
-      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3 pl-9">
+      {/* Row 2: Stats */}
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <span>{feed?.unreadCount || 0} unread</span>
         <span>•</span>
         <span>{entriesData?.total ?? entries.length} total</span>
-        {feed?.lastCheckedAt && (
-          <>
-            <span>•</span>
-            <span>Updated {new Date((feed as any).checkedAt || feed.lastCheckedAt).toLocaleDateString()}</span>
-          </>
-        )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 pl-9">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+      {/* Row 3: Actions */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button
           onClick={handleRefresh}
           disabled={refreshFeed.isPending}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3 h-3 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
           Refresh
-        </motion.button>
+        </button>
         
         {feed?.siteUrl && (
           <a
             href={feed.siteUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3 h-3" />
             Visit
           </a>
         )}
 
         {entries.length > 0 && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={handleMarkAllRead}
             disabled={updateEntriesStatus.isPending}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors disabled:opacity-50"
             title="Mark all as read"
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-          </motion.button>
+            <CheckCheck className="w-3 h-3" />
+            Read all
+          </button>
         )}
 
-        <div className="flex-1" />
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() => setShowDeleteConfirm(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors ml-auto"
         >
-          <Trash2 className="w-3.5 h-3.5" />
-        </motion.button>
+          <Trash2 className="w-3 h-3" />
+        </button>
       </div>
     </motion.div>
   );

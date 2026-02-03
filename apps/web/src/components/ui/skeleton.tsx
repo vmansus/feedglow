@@ -39,25 +39,18 @@ export function EntryListSkeleton({ count = 5 }: { count?: number }) {
 
 export function FeedHeaderSkeleton() {
   return (
-    <div className="p-4 animate-pulse">
-      <div className="flex items-center gap-3 mb-3">
-        <Skeleton className="w-7 h-7 rounded" />
-        <Skeleton className="w-8 h-8 rounded" />
-        <div className="flex-1">
-          <Skeleton className="h-5 w-40 mb-1" />
-          <Skeleton className="h-3 w-56" />
-        </div>
+    <div className="p-3 space-y-2 animate-pulse">
+      <div className="flex items-center gap-2">
+        <Skeleton className="w-4 h-4 rounded" />
+        <Skeleton className="h-4 w-32" />
       </div>
-      <div className="flex items-center gap-3 mb-3 pl-9">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-24" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-3 w-14" />
+        <Skeleton className="h-3 w-14" />
       </div>
-      <div className="flex items-center gap-2 pl-9">
-        <Skeleton className="h-6 w-16 rounded-lg" />
-        <Skeleton className="h-6 w-14 rounded-lg" />
-        <div className="flex-1" />
-        <Skeleton className="h-6 w-6 rounded-lg" />
+      <div className="flex items-center gap-1.5">
+        <Skeleton className="h-6 w-16 rounded" />
+        <Skeleton className="h-6 w-12 rounded" />
       </div>
     </div>
   );
