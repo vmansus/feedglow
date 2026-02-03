@@ -13,6 +13,10 @@ import {
   generateTags,
   getDefaultAIConfig,
 } from '../services/ai.js';
+import {
+  extractContent,
+  ContentExtractionError,
+} from '../services/readability.js';
 
 const entries = new Hono();
 
@@ -174,6 +178,38 @@ entries.post('/:id/tags', async (c) => {
     entryId: id,
     tags,
   });
+});
+
+// ============ Full-text Extraction ============
+
+// Fetch full article content from original URL
+entries.get('/:id/content', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getMinifluxClient();
+  
+  // Get the entry to get its URL
+  const entry = await client.getEntry(id);
+  
+  if (!entry.url) {
+    return c.json({ error: 'Entry has no URL' }, 400);
+  }
+
+  try {
+    const content = await extractContent(entry.url);
+    return c.json({
+      entryId: id,
+      originalUrl: entry.url,
+      ...content,
+    });
+  } catch (error) {
+    if (error instanceof ContentExtractionError) {
+      return c.json(
+        { error: error.message },
+        (error.statusCode as 400) || 500
+      );
+    }
+    throw error;
+  }
 });
 
 export default entries;

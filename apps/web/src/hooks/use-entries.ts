@@ -114,6 +114,15 @@ export function useUpdateEntriesStatus() {
 }
 
 // AI Features
+export function useFetchFullContent() {
+  return useMutation({
+    mutationFn: api.fetchFullContent,
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to fetch full content');
+    },
+  });
+}
+
 export function useSummarize() {
   const queryClient = useQueryClient();
 

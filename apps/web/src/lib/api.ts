@@ -180,6 +180,24 @@ export async function deleteCategory(id: number): Promise<void> {
   await request(`/api/categories/${id}`, { method: 'DELETE' });
 }
 
+// ============ Full-text Content ============
+
+export interface ExtractedContent {
+  entryId: number;
+  originalUrl: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  byline?: string;
+  siteName?: string;
+  length: number;
+  cached: boolean;
+}
+
+export async function fetchFullContent(id: number): Promise<ExtractedContent> {
+  return request<ExtractedContent>(`/api/entries/${id}/content`);
+}
+
 // ============ OPML ============
 
 export async function exportOpml(): Promise<Blob> {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize, useTranslate } from '@/hooks';
+import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -12,14 +12,18 @@ interface EntryReaderProps {
 
 export function EntryReader({ entry }: EntryReaderProps) {
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
   const [isStarred, setIsStarred] = useState(entry.starred);
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
   const translate = useTranslate();
+  const fetchFullContent = useFetchFullContent();
 
   // Sync local state when entry changes (e.g., selecting a different article)
   useEffect(() => {
     setIsStarred(entry.starred);
+    setShowFullContent(false);
+    fetchFullContent.reset();
   }, [entry.id, entry.starred]);
 
   const handleSummarize = () => {
@@ -82,6 +86,14 @@ export function EntryReader({ entry }: EntryReaderProps) {
           {translate.isPending ? '⏳' : '🌐'} Translate
         </button>
 
+        <button
+          onClick={() => fetchFullContent.mutate(entry.id)}
+          disabled={fetchFullContent.isPending || !!fetchFullContent.data}
+          className="px-3 py-1.5 rounded-lg text-sm bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 flex items-center gap-2 hover:bg-green-200 transition-colors disabled:opacity-50"
+        >
+          {fetchFullContent.isPending ? '⏳' : '📄'} {fetchFullContent.data ? 'Fetched' : 'Full Article'}
+        </button>
+
         <a
           href={entry.url}
           target="_blank"
@@ -142,9 +154,46 @@ export function EntryReader({ entry }: EntryReaderProps) {
         </div>
       )}
 
+      {/* Full Article Content (fetched from original) */}
+      {fetchFullContent.data && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowFullContent(!showFullContent)}
+            className="text-sm text-green-600 hover:underline mb-2 flex items-center gap-1"
+          >
+            {showFullContent ? '🔼 Show RSS content' : '🔽 Show full article'}
+            {fetchFullContent.data.cached && <span className="text-gray-400">(cached)</span>}
+          </button>
+          {showFullContent && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <span>📄</span> Full Article
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {Math.round(fetchFullContent.data.length / 1000)}k chars
+                </span>
+              </div>
+              {fetchFullContent.data.byline && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  {fetchFullContent.data.byline}
+                </p>
+              )}
+              <div
+                className="prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600"
+                dangerouslySetInnerHTML={{ __html: fetchFullContent.data.content }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       <div
-        className="prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600"
+        className={cn(
+          "prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600",
+          showFullContent && "hidden"
+        )}
         dangerouslySetInnerHTML={{ __html: entry.content }}
       />
 
