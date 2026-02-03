@@ -9,6 +9,9 @@ import { getMinifluxClient, type Entry } from '../lib/miniflux.js';
 
 const webhook = new Hono();
 
+// Webhook secret for verification
+const WEBHOOK_SECRET = process.env.MINIFLUX_WEBHOOK_SECRET;
+
 // Miniflux webhook payload structure
 interface MinifluxWebhookPayload {
   event_type: 'new_entries' | 'save_entry';
@@ -39,6 +42,15 @@ const summaryStore = new Map<number, {
 }>();
 
 webhook.post('/miniflux', async (c) => {
+  // Verify webhook secret if configured
+  if (WEBHOOK_SECRET) {
+    const providedSecret = c.req.header('X-Webhook-Secret');
+    if (providedSecret !== WEBHOOK_SECRET) {
+      console.log('[Webhook] Invalid or missing webhook secret');
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+  }
+
   const payload = await c.req.json<MinifluxWebhookPayload>();
 
   console.log(`[Webhook] Received ${payload.event_type} from feed: ${payload.feed.title}`);

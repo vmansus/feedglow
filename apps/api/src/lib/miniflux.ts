@@ -3,6 +3,18 @@
  * https://miniflux.app/docs/api.html
  */
 
+// Custom error class for better error handling
+export class MinifluxError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public endpoint?: string
+  ) {
+    super(message);
+    this.name = 'MinifluxError';
+  }
+}
+
 export interface MinifluxConfig {
   baseUrl: string;
   apiKey: string;
@@ -136,7 +148,7 @@ export class MinifluxClient {
 
     if (!res.ok) {
       const error = await res.text();
-      throw new Error(`Miniflux API error: ${res.status} ${error}`);
+      throw new MinifluxError(res.status, error, path);
     }
 
     return res.json();

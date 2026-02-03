@@ -8,6 +8,37 @@ import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import type { Entry } from '../lib/miniflux.js';
 
+// Rate limiting: simple in-memory token bucket
+const rateLimiter = {
+  tokens: 10,
+  maxTokens: 10,
+  refillRate: 1, // tokens per second
+  lastRefill: Date.now(),
+  
+  tryConsume(): boolean {
+    const now = Date.now();
+    const elapsed = (now - this.lastRefill) / 1000;
+    this.tokens = Math.min(this.maxTokens, this.tokens + elapsed * this.refillRate);
+    this.lastRefill = now;
+    
+    if (this.tokens >= 1) {
+      this.tokens -= 1;
+      return true;
+    }
+    return false;
+  }
+};
+
+export class AIRateLimitError extends Error {
+  constructor() {
+    super('AI rate limit exceeded. Please try again later.');
+    this.name = 'AIRateLimitError';
+  }
+}
+
+// Default timeout for AI requests (30 seconds)
+const AI_TIMEOUT_MS = 30000;
+
 export interface AIConfig {
   provider: 'openai' | 'anthropic' | 'ollama';
   model?: string;
@@ -61,6 +92,11 @@ export async function summarizeArticle(
   entry: Entry,
   config: AIConfig
 ): Promise<SummaryResult> {
+  // Rate limiting check
+  if (!rateLimiter.tryConsume()) {
+    throw new AIRateLimitError();
+  }
+
   const model = getModel(config);
 
   const prompt = `Please analyze the following article and provide:
@@ -81,6 +117,7 @@ Respond in JSON format:
     model,
     prompt,
     maxTokens: 500,
+    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
   });
 
   try {
@@ -110,6 +147,11 @@ export async function translateArticle(
   targetLanguage: string,
   config: AIConfig
 ): Promise<TranslationResult> {
+  // Rate limiting check
+  if (!rateLimiter.tryConsume()) {
+    throw new AIRateLimitError();
+  }
+
   const model = getModel(config);
 
   const content = stripHtml(entry.content).slice(0, 10000);
@@ -133,6 +175,7 @@ Respond in JSON format:
     model,
     prompt,
     maxTokens: 4000,
+    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
   });
 
   try {
@@ -159,6 +202,11 @@ export async function generateTags(
   entry: Entry,
   config: AIConfig
 ): Promise<string[]> {
+  // Rate limiting check
+  if (!rateLimiter.tryConsume()) {
+    throw new AIRateLimitError();
+  }
+
   const model = getModel(config);
 
   const content = stripHtml(entry.content).slice(0, 4000);
@@ -176,6 +224,7 @@ Respond with a JSON array of tags:
     model,
     prompt,
     maxTokens: 100,
+    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
   });
 
   try {
