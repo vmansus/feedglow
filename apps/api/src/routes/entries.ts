@@ -25,8 +25,25 @@ entries.get('/', async (c) => {
   const categoryId = c.req.query('categoryId')
     ? parseInt(c.req.query('categoryId')!)
     : undefined;
+  const feedId = c.req.query('feedId')
+    ? parseInt(c.req.query('feedId')!)
+    : undefined;
 
   const client = getMinifluxClient();
+  
+  // If feedId is specified, get entries for that specific feed
+  if (feedId) {
+    const result = await client.getFeedEntries(feedId, {
+      status,
+      limit,
+      offset,
+      order: 'published_at',
+      direction: 'desc',
+    });
+    return c.json(result);
+  }
+
+  // Otherwise get all entries with filters
   const result = await client.getEntries({
     status,
     limit,

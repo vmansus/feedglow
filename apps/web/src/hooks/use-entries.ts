@@ -54,12 +54,44 @@ export function useToggleBookmark() {
 
   return useMutation({
     mutationFn: api.toggleBookmark,
+    onMutate: async (entryId: number) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['entries'] });
+
+      // Snapshot previous value
+      const previousEntries = queryClient.getQueriesData({ queryKey: ['entries'] });
+
+      // Optimistically update all entry caches
+      queryClient.setQueriesData({ queryKey: ['entries'] }, (old: any) => {
+        if (!old) return old;
+        if (old.entries) {
+          return {
+            ...old,
+            entries: old.entries.map((entry: any) =>
+              entry.id === entryId ? { ...entry, starred: !entry.starred } : entry
+            ),
+          };
+        }
+        return old;
+      });
+
+      return { previousEntries };
+    },
+    onError: (_err, _entryId, context) => {
+      // Rollback on error
+      if (context?.previousEntries) {
+        context.previousEntries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error('Failed to update bookmark');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entries'] });
       toast.success('Bookmark updated');
     },
-    onError: () => {
-      toast.error('Failed to update bookmark');
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
     },
   });
 }
