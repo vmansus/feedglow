@@ -4,7 +4,7 @@
  */
 
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import type { Entry } from '../lib/miniflux.js';
 
@@ -71,19 +71,24 @@ function getModel(config: AIConfig) {
   const model = config.model || DEFAULT_MODELS[config.provider];
 
   switch (config.provider) {
-    case 'openai':
+    case 'openai': {
       // Support custom baseUrl for OpenAI-compatible APIs (DeepSeek, etc.)
-      if (config.baseUrl) {
-        return openai(model, { baseURL: config.baseUrl });
-      }
+      const openai = createOpenAI({
+        baseURL: config.baseUrl || 'https://api.openai.com/v1',
+        apiKey: config.apiKey,
+      });
       return openai(model);
+    }
     case 'anthropic':
       return anthropic(model);
-    case 'ollama':
+    case 'ollama': {
       // For Ollama, use openai-compatible endpoint
-      return openai(model, {
+      const ollama = createOpenAI({
         baseURL: config.baseUrl || 'http://localhost:11434/v1',
+        apiKey: 'ollama', // Ollama doesn't need a real key
       });
+      return ollama(model);
+    }
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
