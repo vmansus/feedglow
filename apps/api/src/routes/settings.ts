@@ -1,170 +1,109 @@
 /**
- * Settings routes
- * User preferences and AI configuration
+ * Settings API Routes
  */
 
 import { Hono } from 'hono';
-import { authMiddleware } from '../lib/auth.js';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { authMiddleware, type JWTPayload } from '../lib/auth.js';
+import {
+  getAISettingsForResponse,
+  updateAISettings,
+  testAIConnection,
+  DEFAULT_MODELS,
+  DEFAULT_BASE_URLS,
+  type AIProvider,
+} from '../services/settings.js';
 
 const settings = new Hono();
 
-// Settings are stored per-user in a JSON file
-const DATA_DIR = process.env.DATA_DIR || './data';
-const SETTINGS_DIR = join(DATA_DIR, 'settings');
+// Apply auth middleware to all settings routes
+settings.use('/*', authMiddleware);
 
-// Ensure settings directory exists
-if (!existsSync(SETTINGS_DIR)) {
-  mkdirSync(SETTINGS_DIR, { recursive: true });
-}
+// Get AI settings
+settings.get('/ai', async (c) => {
+  // Get user from JWT (set by auth middleware)
+  const user = c.get('user') as JWTPayload;
+  const userId = user.userId;
+  
+  const aiSettings = await getAISettingsForResponse(userId);
+  
+  return c.json({
+    ...aiSettings,
+    availableProviders: [
+      { id: 'openai', name: 'OpenAI', needsApiKey: true, needsBaseUrl: false },
+      { id: 'anthropic', name: 'Anthropic Claude', needsApiKey: true, needsBaseUrl: false },
+      { id: 'deepseek', name: 'DeepSeek', needsApiKey: true, needsBaseUrl: false },
+      { id: 'ollama', name: 'Ollama (Local)', needsApiKey: false, needsBaseUrl: true },
+      { id: 'custom', name: 'Custom (OpenAI Compatible)', needsApiKey: true, needsBaseUrl: true },
+    ],
+    defaultModels: DEFAULT_MODELS,
+    defaultBaseUrls: DEFAULT_BASE_URLS,
+  });
+});
 
-interface UserSettings {
-  // AI settings
-  ai: {
-    provider: 'openai' | 'anthropic' | 'ollama' | 'deepseek';
-    model?: string;
-    apiKey?: string;
-    baseUrl?: string;
-    summarizePrompt?: string;
-    translateLanguage?: string;
-  };
-  // Display settings
-  display: {
-    theme: 'light' | 'dark' | 'system';
-    fontSize: 'small' | 'medium' | 'large';
-    showImages: boolean;
-    compactList: boolean;
-  };
-  // Reading settings
-  reading: {
-    markAsReadOnScroll: boolean;
-    openLinksInNewTab: boolean;
-    autoRefreshInterval?: number; // minutes, 0 = disabled
-  };
-}
+// Update AI settings
+const updateAISchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'deepseek', 'ollama', 'custom']).optional(),
+  apiKey: z.string().optional(),
+  clearApiKey: z.boolean().optional(), // Set to true to remove API key
+  baseUrl: z.string().url().optional().or(z.literal('')),
+  model: z.string().optional(),
+  enableSummary: z.boolean().optional(),
+  enableTranslation: z.boolean().optional(),
+});
 
-const defaultSettings: UserSettings = {
-  ai: {
-    provider: 'deepseek',
-    model: 'deepseek-chat',
-    translateLanguage: 'zh-CN',
-  },
-  display: {
-    theme: 'system',
-    fontSize: 'medium',
-    showImages: true,
-    compactList: false,
-  },
-  reading: {
-    markAsReadOnScroll: true,
-    openLinksInNewTab: true,
-    autoRefreshInterval: 0,
-  },
-};
-
-function getSettingsPath(userId: number): string {
-  return join(SETTINGS_DIR, `user_${userId}.json`);
-}
-
-function loadSettings(userId: number): UserSettings {
-  const path = getSettingsPath(userId);
-  try {
-    if (existsSync(path)) {
-      const data = readFileSync(path, 'utf8');
-      return { ...defaultSettings, ...JSON.parse(data) };
-    }
-  } catch (err) {
-    console.error(`Failed to load settings for user ${userId}:`, err);
+settings.put('/ai', zValidator('json', updateAISchema), async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const userId = user.userId;
+  
+  const body = c.req.valid('json');
+  
+  // Handle clear API key
+  const updates: Record<string, unknown> = { ...body };
+  if (body.clearApiKey) {
+    updates.apiKey = undefined;
+    delete updates.clearApiKey;
   }
-  return { ...defaultSettings };
-}
-
-function saveSettings(userId: number, settings: UserSettings): void {
-  const path = getSettingsPath(userId);
-  writeFileSync(path, JSON.stringify(settings, null, 2));
-}
-
-/**
- * GET /settings
- * Get current user settings
- */
-settings.get('/', authMiddleware, async (c) => {
-  const user = c.get('user');
-  const userSettings = loadSettings(user.userId);
   
-  // Don't expose sensitive API keys
-  const safeSettings = {
-    ...userSettings,
-    ai: {
-      ...userSettings.ai,
-      apiKey: userSettings.ai.apiKey ? '********' : undefined,
-    },
-  };
-
-  return c.json(safeSettings);
-});
-
-/**
- * PUT /settings
- * Update user settings
- */
-settings.put('/', authMiddleware, async (c) => {
-  const user = c.get('user');
-  const updates = await c.req.json<Partial<UserSettings>>();
-  
-  const currentSettings = loadSettings(user.userId);
-  
-  // Deep merge settings
-  const newSettings: UserSettings = {
-    ai: { ...currentSettings.ai, ...updates.ai },
-    display: { ...currentSettings.display, ...updates.display },
-    reading: { ...currentSettings.reading, ...updates.reading },
-  };
-
-  saveSettings(user.userId, newSettings);
-
-  // Don't expose sensitive API keys
-  const safeSettings = {
-    ...newSettings,
-    ai: {
-      ...newSettings.ai,
-      apiKey: newSettings.ai.apiKey ? '********' : undefined,
-    },
-  };
-
-  return c.json(safeSettings);
-});
-
-/**
- * PATCH /settings/:section
- * Update a specific settings section
- */
-settings.patch('/:section', authMiddleware, async (c) => {
-  const user = c.get('user');
-  const section = c.req.param('section') as keyof UserSettings;
-  const updates = await c.req.json();
-
-  if (!['ai', 'display', 'reading'].includes(section)) {
-    return c.json({ error: 'Invalid settings section' }, 400);
+  // Clean up empty strings
+  if (updates.baseUrl === '') {
+    updates.baseUrl = undefined;
   }
-
-  const currentSettings = loadSettings(user.userId);
-  currentSettings[section] = { ...currentSettings[section], ...updates };
+  if (updates.model === '') {
+    updates.model = undefined;
+  }
   
-  saveSettings(user.userId, currentSettings);
-
-  return c.json({ success: true, [section]: currentSettings[section] });
+  await updateAISettings(userId, updates as Parameters<typeof updateAISettings>[1]);
+  
+  // Return updated settings (masked)
+  const aiSettings = await getAISettingsForResponse(userId);
+  
+  return c.json({
+    success: true,
+    settings: aiSettings,
+  });
 });
 
-/**
- * DELETE /settings
- * Reset settings to defaults
- */
-settings.delete('/', authMiddleware, async (c) => {
-  const user = c.get('user');
-  saveSettings(user.userId, { ...defaultSettings });
-  return c.json({ success: true, message: 'Settings reset to defaults' });
+// Test AI connection
+const testAISchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'deepseek', 'ollama', 'custom']),
+  apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
+  model: z.string().optional(),
+});
+
+settings.post('/ai/test', zValidator('json', testAISchema), async (c) => {
+  const { provider, apiKey, baseUrl, model } = c.req.valid('json');
+  
+  const result = await testAIConnection(
+    provider as AIProvider,
+    apiKey,
+    baseUrl,
+    model
+  );
+  
+  return c.json(result);
 });
 
 export default settings;

@@ -271,3 +271,46 @@ export function getDefaultAIConfig(): AIConfig {
     baseUrl: process.env.AI_BASE_URL,
   };
 }
+
+/**
+ * Get AI config for a specific user (from stored settings)
+ */
+export async function getAIConfigForUser(userId: number): Promise<AIConfig> {
+  // Dynamic import to avoid circular dependencies
+  const { getAISettings, getDecryptedApiKey, DEFAULT_BASE_URLS, DEFAULT_MODELS } = await import('./settings.js');
+  
+  const settings = await getAISettings(userId);
+  const apiKey = await getDecryptedApiKey(userId);
+  
+  // Map provider to AIConfig format
+  let provider: AIConfig['provider'] = 'openai';
+  let baseUrl = settings.baseUrl;
+  
+  switch (settings.provider) {
+    case 'openai':
+      provider = 'openai';
+      baseUrl = baseUrl || DEFAULT_BASE_URLS.openai;
+      break;
+    case 'anthropic':
+      provider = 'anthropic';
+      break;
+    case 'deepseek':
+      provider = 'openai'; // DeepSeek uses OpenAI-compatible API
+      baseUrl = baseUrl || DEFAULT_BASE_URLS.deepseek;
+      break;
+    case 'ollama':
+      provider = 'ollama';
+      baseUrl = baseUrl || DEFAULT_BASE_URLS.ollama;
+      break;
+    case 'custom':
+      provider = 'openai'; // Custom uses OpenAI-compatible API
+      break;
+  }
+  
+  return {
+    provider,
+    model: settings.model || DEFAULT_MODELS[settings.provider],
+    apiKey,
+    baseUrl,
+  };
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '@/contexts/theme-context';
 import { Sun, Moon, Monitor, Save, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AISettings } from '@/components/settings/ai-settings';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -125,6 +126,9 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {/* AI Configuration */}
+        <AISettings />
 
         {/* API Configuration */}
         <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

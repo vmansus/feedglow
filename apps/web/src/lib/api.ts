@@ -180,6 +180,68 @@ export async function deleteCategory(id: number): Promise<void> {
   await request(`/api/categories/${id}`, { method: 'DELETE' });
 }
 
+// ============ AI Settings ============
+
+export type AIProvider = 'openai' | 'anthropic' | 'deepseek' | 'ollama' | 'custom';
+
+export interface AISettingsResponse {
+  provider: AIProvider;
+  apiKeyMasked?: string;
+  hasApiKey: boolean;
+  baseUrl?: string;
+  model?: string;
+  enableSummary: boolean;
+  enableTranslation: boolean;
+  updatedAt: string;
+  availableProviders: {
+    id: AIProvider;
+    name: string;
+    needsApiKey: boolean;
+    needsBaseUrl: boolean;
+  }[];
+  defaultModels: Record<AIProvider, string>;
+  defaultBaseUrls: Record<AIProvider, string>;
+}
+
+export interface AISettingsUpdate {
+  provider?: AIProvider;
+  apiKey?: string;
+  clearApiKey?: boolean;
+  baseUrl?: string;
+  model?: string;
+  enableSummary?: boolean;
+  enableTranslation?: boolean;
+}
+
+export interface TestConnectionResult {
+  success: boolean;
+  message: string;
+  latencyMs?: number;
+}
+
+export async function getAISettings(): Promise<AISettingsResponse> {
+  return request<AISettingsResponse>('/api/settings/ai');
+}
+
+export async function updateAISettings(settings: AISettingsUpdate): Promise<{ success: boolean; settings: AISettingsResponse }> {
+  return request('/api/settings/ai', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function testAIConnection(params: {
+  provider: AIProvider;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+}): Promise<TestConnectionResult> {
+  return request('/api/settings/ai/test', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
 // ============ Full-text Content ============
 
 export interface ExtractedContent {

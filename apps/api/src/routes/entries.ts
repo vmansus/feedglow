@@ -11,8 +11,9 @@ import {
   summarizeArticle,
   translateArticle,
   generateTags,
-  getDefaultAIConfig,
+  getAIConfigForUser,
 } from '../services/ai.js';
+import type { JWTPayload } from '../lib/auth.js';
 import {
   extractContent,
   ContentExtractionError,
@@ -127,10 +128,11 @@ entries.post('/:id/bookmark', async (c) => {
 // Generate AI summary for entry
 entries.post('/:id/summarize', async (c) => {
   const id = parseInt(c.req.param('id'));
+  const user = c.get('user') as JWTPayload;
   const client = getClient(c);
   const entry = await client.getEntry(id);
 
-  const config = getDefaultAIConfig();
+  const config = await getAIConfigForUser(user.userId);
   const summary = await summarizeArticle(entry, config);
 
   return c.json({
@@ -150,11 +152,12 @@ entries.post(
   async (c) => {
     const id = parseInt(c.req.param('id'));
     const { language } = c.req.valid('json');
+    const user = c.get('user') as JWTPayload;
 
     const client = getClient(c);
     const entry = await client.getEntry(id);
 
-    const config = getDefaultAIConfig();
+    const config = await getAIConfigForUser(user.userId);
     const translation = await translateArticle(entry, language, config);
 
     return c.json({
@@ -168,10 +171,11 @@ entries.post(
 // Generate tags for entry
 entries.post('/:id/tags', async (c) => {
   const id = parseInt(c.req.param('id'));
+  const user = c.get('user') as JWTPayload;
   const client = getClient(c);
   const entry = await client.getEntry(id);
 
-  const config = getDefaultAIConfig();
+  const config = await getAIConfigForUser(user.userId);
   const tags = await generateTags(entry, config);
 
   return c.json({
@@ -185,7 +189,7 @@ entries.post('/:id/tags', async (c) => {
 // Fetch full article content from original URL
 entries.get('/:id/content', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const client = getMinifluxClient();
+  const client = getClient(c);
   
   // Get the entry to get its URL
   const entry = await client.getEntry(id);
