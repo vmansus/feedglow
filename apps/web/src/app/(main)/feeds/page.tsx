@@ -55,7 +55,7 @@ export default function FeedsPage() {
       </div>
 
       {(!feeds || feeds.length === 0) ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <Rss className="w-12 h-12 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 mb-4">No feeds yet</p>
           <Link
@@ -72,8 +72,8 @@ export default function FeedsPage() {
           {categorizedFeeds.map(([catId, catFeeds]) => {
             const category = categories?.find(c => c.id === Number(catId));
             return (
-              <div key={catId} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div key={catId} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                   <Folder className="w-4 h-4 text-gray-500" />
                   <span className="font-medium">{category?.title || 'Unknown'}</span>
                   <span className="text-sm text-gray-400">({catFeeds.length})</span>
@@ -89,10 +89,10 @@ export default function FeedsPage() {
 
           {/* Uncategorized feeds */}
           {uncategorized.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <Rss className="w-4 h-4 text-gray-500" />
-                <span className="font-medium">Uncategorized</span>
+                <span className="font-medium dark:text-white">Uncategorized</span>
                 <span className="text-sm text-gray-400">({uncategorized.length})</span>
               </div>
               <div className="divide-y divide-gray-100">
@@ -115,7 +115,10 @@ export default function FeedsPage() {
 
 function FeedItem({ feed }: { feed: Feed }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+    <Link 
+      href={`/feed/${feed.id}`}
+      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+    >
       {feed.iconUrl ? (
         <img
           src={feed.iconUrl}
@@ -129,8 +132,8 @@ function FeedItem({ feed }: { feed: Feed }) {
         <Rss className="w-6 h-6 text-gray-300" />
       )}
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{feed.title}</div>
-        <div className="text-sm text-gray-400 truncate">{feed.siteUrl || feed.feedUrl}</div>
+        <div className="font-medium truncate dark:text-white">{feed.title}</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 truncate">{feed.siteUrl || feed.feedUrl}</div>
       </div>
       <div className="flex items-center gap-3 text-sm text-gray-400">
         {(feed.unreadCount ?? 0) > 0 && (
@@ -139,17 +142,19 @@ function FeedItem({ feed }: { feed: Feed }) {
           </span>
         )}
         {feed.siteUrl && (
-          <a
-            href={feed.siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:text-gray-600"
+          <span
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(feed.siteUrl, '_blank');
+            }}
+            className="p-1 hover:text-gray-600 cursor-pointer"
             title="Visit site"
           >
             <ExternalLink className="w-4 h-4" />
-          </a>
+          </span>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
