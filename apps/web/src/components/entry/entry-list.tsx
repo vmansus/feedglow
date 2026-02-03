@@ -84,7 +84,10 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
             >
               {/* Selected indicator - glow bar */}
               {isSelected && (
-                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500 glow" />
+                <div 
+                  className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500" 
+                  style={{ boxShadow: '0 0 10px rgba(249, 115, 22, 0.8), 0 0 20px rgba(249, 115, 22, 0.4)' }}
+                />
               )}
 
               <div className="flex gap-3">

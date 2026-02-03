@@ -140,7 +140,8 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 glow-subtle"
+              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30"
+              style={{ boxShadow: '0 0 30px rgba(249, 115, 22, 0.2), 0 0 60px rgba(249, 115, 22, 0.1)' }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
@@ -163,12 +164,15 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
               )}
             </motion.div>
           ) : (
-            <div className="mb-8 p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default">
+            <div 
+              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/20"
+              style={{ boxShadow: '0 0 20px rgba(249, 115, 22, 0.1)' }}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-orange-400" />
                 </div>
-                <span className="font-medium text-muted">AI Summary</span>
+                <span className="font-medium text-orange-400/80">AI Summary</span>
               </div>
               <button
                 onClick={() => summarize.mutate(entry.id)}

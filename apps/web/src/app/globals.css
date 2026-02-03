@@ -69,12 +69,14 @@
 @layer components {
   /* The Glow Effect - FeedGlow's Signature */
   .glow {
-    box-shadow: 0 0 20px rgba(var(--color-primary-rgb), 0.3),
-                0 0 40px rgba(var(--color-primary-rgb), 0.1);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.5),
+                0 0 30px rgba(249, 115, 22, 0.3),
+                0 0 45px rgba(249, 115, 22, 0.1);
   }
 
   .glow-subtle {
-    box-shadow: 0 0 30px rgba(var(--color-primary-rgb), 0.15);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.25),
+                0 0 40px rgba(249, 115, 22, 0.1);
   }
 
   .glow-text {
