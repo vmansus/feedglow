@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
+import { cn } from '@feedglow/ui';
 
 interface ResizableLayoutProps {
   sidebar?: ReactNode;
@@ -16,7 +17,7 @@ export function ResizableLayout({
   list,
   reader,
   listHeader,
-  defaultListSize = 384, // 384px = w-96
+  defaultListSize = 384,
   minListSize = 280,
   maxListSize = 600,
 }: ResizableLayoutProps) {
@@ -24,7 +25,6 @@ export function ResizableLayout({
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load saved width from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('feedglow-list-width');
     if (saved) {
@@ -35,7 +35,6 @@ export function ResizableLayout({
     }
   }, [minListSize, maxListSize]);
 
-  // Save width to localStorage
   useEffect(() => {
     if (!isResizing) {
       localStorage.setItem('feedglow-list-width', String(listWidth));
@@ -75,10 +74,10 @@ export function ResizableLayout({
       {/* List Panel */}
       <div
         style={{ width: listWidth }}
-        className="flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-shrink-0"
+        className="flex flex-col surface-base border-r border-default flex-shrink-0"
       >
         {listHeader && (
-          <div className="sticky top-0 bg-white dark:bg-gray-900 z-10 border-b border-gray-200 dark:border-gray-800">
+          <div className="sticky top-0 surface-base z-10 border-b border-default">
             {listHeader}
           </div>
         )}
@@ -88,15 +87,18 @@ export function ResizableLayout({
       {/* Resize Handle */}
       <div
         onMouseDown={handleMouseDown}
-        className={`w-1 cursor-col-resize transition-colors flex-shrink-0 ${
-          isResizing ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700 hover:bg-orange-400 dark:hover:bg-orange-500'
-        }`}
+        className={cn(
+          "w-1 cursor-col-resize transition-colors flex-shrink-0",
+          isResizing 
+            ? "bg-orange-500" 
+            : "bg-[rgb(var(--border-default))] hover:bg-orange-400"
+        )}
       />
 
       {/* Reader Panel */}
-      <div className="flex-1 bg-white dark:bg-gray-900 overflow-hidden">{reader}</div>
+      <div className="flex-1 surface-elevated overflow-hidden">{reader}</div>
 
-      {/* Overlay to prevent iframe/selection issues while resizing */}
+      {/* Overlay during resize */}
       {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
     </div>
   );

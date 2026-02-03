@@ -4,10 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { 
+  X, 
+  Star, 
+  ExternalLink, 
+  Languages, 
+  FileText, 
+  Sparkles,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
-import { ProgressBar } from '@/components/ui/motion';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 
 interface EntryReaderProps {
@@ -28,7 +36,6 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const fetchFullContent = useFetchFullContent();
   const readerSettings = useReaderSettings();
 
-  // Sync local state when entry changes
   useEffect(() => {
     setIsStarred(entry.starred);
     setShowFullContent(false);
@@ -38,7 +45,6 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     translate.reset();
   }, [entry.id, entry.starred]);
 
-  // Track reading progress
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
@@ -53,231 +59,211 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     return () => content.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSummarize = () => {
-    summarize.mutate(entry.id);
-  };
-
-  const handleTranslate = () => {
-    translate.mutate({ id: entry.id, language: 'zh-CN' }, {
-      onSuccess: () => setShowTranslation(true),
-    });
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="h-full flex flex-col"
+      className="h-full flex flex-col surface-elevated"
     >
-      {/* Progress bar */}
-      <ProgressBar progress={readProgress} className="sticky top-0 z-10" />
-      
-      {/* Close button */}
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      )}
-
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <article className="max-w-3xl mx-auto p-6">
-          {/* Header */}
-          <motion.header 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="mb-8"
-          >
-            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
-              <span>{entry.feedTitle}</span>
-              <span>•</span>
-              <time>{formatDistanceToNow(new Date(entry.publishedAt), { addSuffix: true })}</time>
-              <span>•</span>
-              <span>{entry.readingTime} min read</span>
-            </div>
-
-            <h1 className="text-3xl font-bold mb-4 leading-tight dark:text-white">{entry.title}</h1>
-
-            {entry.author && (
-              <p className="text-gray-600 dark:text-gray-400">By {entry.author}</p>
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-default">
+        <div className="flex items-center gap-2">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setIsStarred(!isStarred);
+              toggleBookmark.mutate(entry.id);
+            }}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              isStarred 
+                ? "text-yellow-500 bg-yellow-500/10" 
+                : "text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
             )}
-          </motion.header>
-
-          {/* Action bar */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-2 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800 flex-wrap"
           >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                setIsStarred(!isStarred);
-                toggleBookmark.mutate(entry.id);
-              }}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors',
-                isStarred
-                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-              )}
-            >
-              {isStarred ? '★ Starred' : '☆ Star'}
-            </motion.button>
+            <Star className={cn("w-4 h-4", isStarred && "fill-current")} />
+          </button>
+          <a
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-lg text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+          <ReaderSettingsButton {...readerSettings} />
+        </div>
+      </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSummarize}
-              disabled={summarize.isPending}
-              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              {summarize.isPending ? '⏳' : '✨'} AI Summary
-            </motion.button>
+      {/* Reading Progress */}
+      <div className="h-0.5 bg-[rgb(var(--bg-hover))]">
+        <motion.div 
+          className="h-full bg-gradient-to-r from-orange-500 to-orange-400 glow"
+          initial={{ width: 0 }}
+          animate={{ width: `${readProgress}%` }}
+          transition={{ duration: 0.1 }}
+        />
+      </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleTranslate}
-              disabled={translate.isPending}
-              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              {translate.isPending ? '⏳' : '🌐'} Translate
-            </motion.button>
+      {/* Content */}
+      <div ref={contentRef} className="flex-1 overflow-y-auto">
+        <article className="max-w-2xl mx-auto px-6 py-8">
+          {/* Meta */}
+          <div className="flex items-center gap-3 mb-4 text-sm text-muted">
+            <span>{entry.feedTitle}</span>
+            <span>•</span>
+            <time>{formatDistanceToNow(new Date(entry.publishedAt), { addSuffix: true })}</time>
+          </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => fetchFullContent.mutate(entry.id)}
-              disabled={fetchFullContent.isPending || !!fetchFullContent.data}
-              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              {fetchFullContent.isPending ? '⏳' : '📄'} {fetchFullContent.data ? 'Fetched' : 'Full Article'}
-            </motion.button>
+          {/* Title */}
+          <h1 className="text-2xl font-bold mb-4 leading-tight text-[rgb(var(--text-primary))]">
+            {entry.title}
+          </h1>
 
-            <a
-              href={entry.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded-lg text-sm bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-auto"
-            >
-              🔗 Original
-            </a>
+          {entry.author && (
+            <p className="text-sm text-muted mb-6">By {entry.author}</p>
+          )}
 
-            <ReaderSettingsButton {...readerSettings} />
-          </motion.div>
-
-          {/* AI Summary */}
-          {(entry.summary || summarize.data) && (
+          {/* AI Summary Card - Glow Feature */}
+          {(entry.summary || summarize.data) ? (
             <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 glow-subtle"
             >
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <span>🤖</span> AI Summary
-              </h3>
-              <p className="text-gray-700 dark:text-gray-300 mb-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-orange-400" />
+                </div>
+                <span className="font-medium text-orange-400">AI Summary</span>
+              </div>
+              <p className="text-secondary text-sm leading-relaxed">
                 {summarize.data?.summary || entry.summary}
               </p>
               {(summarize.data?.keyPoints || entry.keyPoints) && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Key Points:</h4>
-                  <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    {(summarize.data?.keyPoints || entry.keyPoints)?.map((point, i) => (
-                      <li key={i}>{point}</li>
-                    ))}
-                  </ul>
-                </div>
+                <ul className="mt-3 space-y-1">
+                  {(summarize.data?.keyPoints || entry.keyPoints)?.map((point, i) => (
+                    <li key={i} className="text-xs text-muted flex items-start gap-2">
+                      <span className="text-orange-400">•</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
               )}
             </motion.div>
+          ) : (
+            <div className="mb-8 p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-orange-400" />
+                </div>
+                <span className="font-medium text-muted">AI Summary</span>
+              </div>
+              <button
+                onClick={() => summarize.mutate(entry.id)}
+                disabled={summarize.isPending}
+                className="text-sm text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50"
+              >
+                {summarize.isPending ? 'Generating...' : 'Generate summary →'}
+              </button>
+            </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
+            <button
+              onClick={() => translate.mutate({ id: entry.id, language: 'zh-CN' }, {
+                onSuccess: () => setShowTranslation(true),
+              })}
+              disabled={translate.isPending}
+              className="btn-subtle flex items-center gap-2"
+            >
+              <Languages className="w-4 h-4" />
+              {translate.isPending ? 'Translating...' : 'Translate'}
+            </button>
+            <button
+              onClick={() => fetchFullContent.mutate(entry.id)}
+              disabled={fetchFullContent.isPending || !!fetchFullContent.data}
+              className="btn-subtle flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {fetchFullContent.isPending ? 'Fetching...' : fetchFullContent.data ? 'Fetched' : 'Full Article'}
+            </button>
+          </div>
 
           {/* Translation */}
           {(entry.translation || translate.data) && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
+            <div className="mb-6">
               <button
                 onClick={() => setShowTranslation(!showTranslation)}
-                className="text-sm text-orange-600 dark:text-orange-400 hover:underline mb-2"
+                className="flex items-center gap-1 text-sm text-orange-400 hover:text-orange-300 mb-2"
               >
-                {showTranslation ? '▲ Hide translation' : '▼ Show translation'}
+                {showTranslation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showTranslation ? 'Hide translation' : 'Show translation'}
               </button>
               {showTranslation && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800"
+                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default"
                 >
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <span>🌐</span> Translation
-                  </h3>
-                  <h4 className="font-medium mb-2">
+                  <h4 className="font-medium mb-2 text-[rgb(var(--text-primary))]">
                     {translate.data?.title || entry.translation?.title}
                   </h4>
                   <div
-                    className="prose dark:prose-invert max-w-none text-sm"
+                    className="prose prose-sm dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{
                       __html: translate.data?.content || entry.translation?.content || '',
                     }}
                   />
                 </motion.div>
               )}
-            </motion.div>
+            </div>
           )}
 
           {/* Full Article Content */}
           {fetchFullContent.data && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
+            <div className="mb-6">
               <button
                 onClick={() => setShowFullContent(!showFullContent)}
-                className="text-sm text-orange-600 dark:text-orange-400 hover:underline mb-2 flex items-center gap-1"
+                className="flex items-center gap-1 text-sm text-orange-400 hover:text-orange-300 mb-2"
               >
-                {showFullContent ? '▲ Show RSS content' : '▼ Show full article'}
-                {fetchFullContent.data.cached && <span className="text-gray-400">(cached)</span>}
+                {showFullContent ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showFullContent ? 'Show RSS content' : 'Show full article'}
               </button>
               {showFullContent && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800"
+                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <span>📄</span> Full Article
-                    </h3>
-                    <span className="text-xs text-gray-400">
-                      {Math.round(fetchFullContent.data.length / 1000)}k chars
-                    </span>
-                  </div>
-                  {fetchFullContent.data.byline && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                      {fetchFullContent.data.byline}
-                    </p>
-                  )}
                   <div
-                    className="prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600"
+                    className="prose prose-sm dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: fetchFullContent.data.content }}
                   />
                 </motion.div>
               )}
-            </motion.div>
+            </div>
           )}
 
-          {/* Content */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
+          {/* Main Content */}
+          <div
             style={getReaderStyles(readerSettings.settings)}
             className={cn(
-              "prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600 prose-headings:text-gray-900 dark:prose-headings:text-white",
+              "prose prose-sm dark:prose-invert max-w-none",
+              "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
+              "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary",
               showFullContent && "hidden"
             )}
             dangerouslySetInnerHTML={{ __html: entry.content }}
@@ -285,21 +271,18 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
 
           {/* Tags */}
           {entry.tags && entry.tags.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800"
-            >
-              <h4 className="text-sm font-medium mb-2">Tags:</h4>
+            <div className="mt-8 pt-6 border-t border-default">
               <div className="flex flex-wrap gap-2">
                 {entry.tags.map((tag) => (
-                  <span key={tag} className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <span 
+                    key={tag} 
+                    className="px-2 py-1 text-xs bg-[rgb(var(--bg-hover))] text-muted rounded-lg"
+                  >
                     #{tag}
                   </span>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
         </article>
       </div>

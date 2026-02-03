@@ -11,7 +11,7 @@ export default function MainLayout({
   const commandPalette = useCommandPalette();
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen surface-base">
       <Sidebar />
       <main className="flex-1 overflow-hidden">{children}</main>
       <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} />

@@ -10,7 +10,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-gray-200 dark:bg-gray-700',
+        'animate-pulse rounded-md bg-[rgb(var(--bg-hover))]',
         className
       )}
     />
@@ -19,18 +19,19 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function EntryListSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="divide-y divide-gray-100 dark:divide-gray-800">
+    <div>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-3 rounded-full" />
-            <Skeleton className="h-3 w-16" />
+        <div key={i} className="p-4 border-b border-default">
+          <div className="flex gap-3">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+            <Skeleton className="w-16 h-16 rounded-lg flex-shrink-0" />
           </div>
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-3 w-16" />
         </div>
       ))}
     </div>
@@ -58,27 +59,26 @@ export function FeedHeaderSkeleton() {
 
 export function ReaderSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <div className="space-y-4">
+    <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-4 rounded-full" />
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-20" />
         </div>
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="h-4 w-32" />
       </div>
-      <div className="flex gap-2 pb-6 border-b border-gray-200 dark:border-gray-700">
-        <Skeleton className="h-8 w-20 rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-xl" />
+      <div className="flex gap-2">
         <Skeleton className="h-8 w-24 rounded-lg" />
-        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-28 rounded-lg" />
       </div>
-      <div className="space-y-4">
+      <div className="space-y-3 pt-4">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
-        <Skeleton className="h-48 w-full rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-xl" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
       </div>

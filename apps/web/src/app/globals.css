@@ -4,29 +4,52 @@
 
 @layer base {
   :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-rgb: 249, 250, 251;
+    /* FeedGlow Design System */
+    --color-primary: 249 115 22; /* Orange */
+    --color-primary-rgb: 249, 115, 22;
+    
+    /* Light mode */
+    --bg-base: 255 255 255;
+    --bg-elevated: 249 250 251;
+    --bg-hover: 243 244 246;
+    --bg-active: 229 231 235;
+    --border-default: 229 231 235;
+    --border-subtle: 243 244 246;
+    --text-primary: 17 24 39;
+    --text-secondary: 107 114 128;
+    --text-muted: 156 163 175;
   }
 
   .dark {
-    --foreground-rgb: 255, 255, 255;
-    --background-rgb: 3, 7, 18;
+    /* Dark mode - Vercel-inspired */
+    --bg-base: 10 10 10;
+    --bg-elevated: 18 18 18;
+    --bg-hover: 38 38 38;
+    --bg-active: 64 64 64;
+    --border-default: 38 38 38;
+    --border-subtle: 28 28 28;
+    --text-primary: 250 250 250;
+    --text-secondary: 163 163 163;
+    --text-muted: 115 115 115;
   }
 
   body {
-    color: rgb(var(--foreground-rgb));
-    background-color: rgb(var(--background-rgb));
+    background-color: rgb(var(--bg-base));
+    color: rgb(var(--text-primary));
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Smooth transitions for theme changes */
+  /* Smooth transitions */
   html {
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* Scrollbar styling */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -34,47 +57,153 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: #4b5563;
+    background: rgb(var(--border-default));
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-  }
-
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: rgb(var(--text-muted));
   }
 }
 
 @layer components {
-  /* Prose dark mode overrides */
+  /* The Glow Effect - FeedGlow's Signature */
+  .glow {
+    box-shadow: 0 0 20px rgba(var(--color-primary-rgb), 0.3),
+                0 0 40px rgba(var(--color-primary-rgb), 0.1);
+  }
+
+  .glow-subtle {
+    box-shadow: 0 0 30px rgba(var(--color-primary-rgb), 0.15);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(var(--color-primary-rgb), 0.5);
+  }
+
+  /* Border with glow */
+  .border-glow {
+    border-color: rgba(var(--color-primary-rgb), 0.3);
+    box-shadow: 0 0 15px rgba(var(--color-primary-rgb), 0.1);
+  }
+
+  /* Gradient backgrounds */
+  .bg-glow-gradient {
+    background: linear-gradient(
+      135deg,
+      rgba(var(--color-primary-rgb), 0.1) 0%,
+      transparent 50%
+    );
+  }
+
+  /* Surface styles */
+  .surface-base {
+    background-color: rgb(var(--bg-base));
+  }
+
+  .surface-elevated {
+    background-color: rgb(var(--bg-elevated));
+  }
+
+  /* Interactive states */
+  .interactive {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .interactive:hover {
+    background-color: rgb(var(--bg-hover));
+  }
+
+  .interactive:active {
+    background-color: rgb(var(--bg-active));
+  }
+
+  /* Selected state with glow bar */
+  .selected-glow {
+    position: relative;
+    background-color: rgb(var(--bg-hover));
+  }
+
+  .selected-glow::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: rgb(var(--color-primary));
+    box-shadow: 0 0 10px rgba(var(--color-primary-rgb), 0.5);
+  }
+
+  /* Button variants */
+  .btn-ghost {
+    @apply px-3 py-1.5 rounded-lg text-sm transition-all;
+    background-color: transparent;
+    color: rgb(var(--text-secondary));
+  }
+
+  .btn-ghost:hover {
+    background-color: rgb(var(--bg-hover));
+    color: rgb(var(--text-primary));
+  }
+
+  .btn-subtle {
+    @apply px-3 py-1.5 rounded-lg text-sm transition-all;
+    background-color: rgb(var(--bg-hover));
+    border: 1px solid rgb(var(--border-default));
+    color: rgb(var(--text-primary));
+  }
+
+  .btn-subtle:hover {
+    background-color: rgb(var(--bg-active));
+    border-color: rgb(var(--border-default));
+  }
+
+  /* Prose dark mode */
   .prose-invert {
-    --tw-prose-body: #d1d5db;
-    --tw-prose-headings: #f9fafb;
-    --tw-prose-lead: #9ca3af;
-    --tw-prose-links: #f97316;
-    --tw-prose-bold: #f9fafb;
-    --tw-prose-counters: #9ca3af;
-    --tw-prose-bullets: #6b7280;
-    --tw-prose-hr: #374151;
-    --tw-prose-quotes: #f3f4f6;
-    --tw-prose-quote-borders: #4b5563;
-    --tw-prose-captions: #9ca3af;
-    --tw-prose-code: #f9fafb;
-    --tw-prose-pre-code: #d1d5db;
-    --tw-prose-pre-bg: #1f2937;
-    --tw-prose-th-borders: #4b5563;
-    --tw-prose-td-borders: #374151;
+    --tw-prose-body: rgb(var(--text-secondary));
+    --tw-prose-headings: rgb(var(--text-primary));
+    --tw-prose-lead: rgb(var(--text-secondary));
+    --tw-prose-links: rgb(var(--color-primary));
+    --tw-prose-bold: rgb(var(--text-primary));
+    --tw-prose-counters: rgb(var(--text-muted));
+    --tw-prose-bullets: rgb(var(--text-muted));
+    --tw-prose-hr: rgb(var(--border-default));
+    --tw-prose-quotes: rgb(var(--text-primary));
+    --tw-prose-quote-borders: rgb(var(--border-default));
+    --tw-prose-captions: rgb(var(--text-muted));
+    --tw-prose-code: rgb(var(--text-primary));
+    --tw-prose-pre-code: rgb(var(--text-secondary));
+    --tw-prose-pre-bg: rgb(var(--bg-elevated));
+    --tw-prose-th-borders: rgb(var(--border-default));
+    --tw-prose-td-borders: rgb(var(--border-subtle));
   }
 }
 
 @layer utilities {
-  /* Hide scrollbar but keep functionality */
+  /* Text colors using CSS vars */
+  .text-base {
+    color: rgb(var(--text-primary));
+  }
+
+  .text-secondary {
+    color: rgb(var(--text-secondary));
+  }
+
+  .text-muted {
+    color: rgb(var(--text-muted));
+  }
+
+  /* Border colors */
+  .border-default {
+    border-color: rgb(var(--border-default));
+  }
+
+  .border-subtle {
+    border-color: rgb(var(--border-subtle));
+  }
+
+  /* Hide scrollbar */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -82,5 +211,20 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Line clamp */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }

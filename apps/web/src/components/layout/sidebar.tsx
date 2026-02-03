@@ -5,36 +5,35 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@feedglow/ui';
 import { useFeeds, useCategories } from '@/hooks';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, User } from 'lucide-react';
+import { useCommandPalette } from '@/components/ui/command-palette';
+import { 
+  Newspaper, 
+  Star, 
+  Plus, 
+  Settings, 
+  LogOut, 
+  Search,
+  Folder,
+  Inbox
+} from 'lucide-react';
 
-interface NavItemProps {
-  href: string;
-  icon: string;
-  label: string;
-  count?: number;
-  active?: boolean;
-}
-
-function NavItem({ href, icon, label, count, active }: NavItemProps) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-        active
-          ? 'bg-orange-100 text-orange-900 dark:bg-orange-900/20 dark:text-orange-100'
-          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-      )}
-    >
-      <span className="text-lg">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded-full">
-          {count}
-        </span>
-      )}
-    </Link>
-  );
+// Generate consistent color from string
+function stringToColor(str: string): string {
+  const colors = [
+    'from-orange-500 to-red-500',
+    'from-purple-500 to-pink-500',
+    'from-blue-500 to-cyan-500',
+    'from-green-500 to-emerald-500',
+    'from-yellow-500 to-orange-500',
+    'from-indigo-500 to-purple-500',
+    'from-pink-500 to-rose-500',
+    'from-teal-500 to-green-500',
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 }
 
 export function Sidebar() {
@@ -42,126 +41,217 @@ export function Sidebar() {
   const { feeds } = useFeeds();
   const { categories } = useCategories();
   const { user, logout } = useAuth();
+  const { open: openCommandPalette } = useCommandPalette();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
 
   return (
-    <aside className="w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">🌟</span>
-          <span className="text-xl font-bold">
-            Feed<span className="text-orange-500">Glow</span>
-          </span>
+    <div className="flex h-screen">
+      {/* Icon Rail */}
+      <aside className="w-14 border-r border-default surface-elevated flex flex-col items-center py-3 gap-1">
+        {/* Logo */}
+        <Link 
+          href="/"
+          className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-3 glow transition-transform hover:scale-105"
+        >
+          <span className="text-white font-bold text-sm">F</span>
         </Link>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {/* Main sections */}
-        <NavItem
+        {/* Quick Nav */}
+        <NavIconButton
           href="/unread"
-          icon="📥"
-          label="Unread"
-          count={totalUnread}
+          icon={<Inbox className="w-5 h-5" />}
           active={pathname === '/unread'}
+          badge={totalUnread > 0 ? (totalUnread > 99 ? '99+' : totalUnread) : undefined}
         />
-        <NavItem
+        <NavIconButton
           href="/all"
-          icon="📰"
-          label="All Articles"
+          icon={<Newspaper className="w-5 h-5" />}
           active={pathname === '/all'}
         />
-        <NavItem
+        <NavIconButton
           href="/starred"
-          icon="⭐"
-          label="Starred"
+          icon={<Star className="w-5 h-5" />}
           active={pathname === '/starred'}
         />
-
-        {/* Divider */}
-        <div className="my-4 border-t border-gray-200 dark:border-gray-800" />
-
-        {/* Categories */}
-        <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Categories
-        </div>
-        {categories?.map((category) => (
-          <NavItem
-            key={category.id}
-            href={`/category/${category.id}`}
-            icon="📁"
-            label={category.title}
-            count={category.unreadCount}
-            active={pathname === `/category/${category.id}`}
-          />
-        ))}
-
-        {/* Divider */}
-        <div className="my-4 border-t border-gray-200 dark:border-gray-800" />
-
-        {/* Feeds */}
-        <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Feeds
-        </div>
-        {feeds?.slice(0, 10).map((feed) => (
-          <NavItem
-            key={feed.id}
-            href={`/feed/${feed.id}`}
-            icon={feed.iconUrl ? '🔗' : '📄'}
-            label={feed.title}
-            count={feed.unreadCount}
-            active={pathname === `/feed/${feed.id}`}
-          />
-        ))}
-        {feeds && feeds.length > 10 && (
-          <Link
-            href="/feeds"
-            className="block px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            View all {feeds.length} feeds →
-          </Link>
-        )}
-      </nav>
-
-      {/* Bottom actions */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-1">
-        <NavItem
+        <NavIconButton
           href="/feeds/add"
-          icon="➕"
-          label="Add Feed"
+          icon={<Plus className="w-5 h-5" />}
           active={pathname === '/feeds/add'}
         />
-        <NavItem
+
+        <div className="flex-1" />
+
+        {/* Settings */}
+        <NavIconButton
           href="/settings"
-          icon="⚙️"
-          label="Settings"
+          icon={<Settings className="w-5 h-5" />}
           active={pathname === '/settings'}
         />
-      </div>
+      </aside>
 
-      {/* User section */}
-      {user && (
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
-              <User className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate dark:text-white">{user.username}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Connected</p>
-            </div>
-            <button
-              onClick={logout}
-              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+      {/* Feed List Panel */}
+      <aside className="w-56 border-r border-default surface-base flex flex-col">
+        {/* Search */}
+        <div className="p-2">
+          <button
+            onClick={openCommandPalette}
+            className="w-full px-3 py-2 rounded-lg bg-[rgb(var(--bg-hover))] border border-default text-muted text-sm text-left flex items-center gap-2 hover:bg-[rgb(var(--bg-active))] hover:border-[rgb(var(--border-default))] transition-all"
+          >
+            <Search className="w-4 h-4" />
+            <span>Search...</span>
+            <span className="ml-auto text-xs bg-[rgb(var(--bg-active))] px-1.5 py-0.5 rounded">⌘K</span>
+          </button>
         </div>
+
+        {/* Categories */}
+        {categories && categories.length > 0 && (
+          <div className="px-2 pt-2">
+            <div className="text-[10px] uppercase tracking-wider text-muted px-2 py-1.5">
+              Categories
+            </div>
+            {categories.map((category) => (
+              <FeedItem
+                key={`cat-${category.id}`}
+                href={`/category/${category.id}`}
+                icon={<Folder className="w-4 h-4 text-orange-500" />}
+                title={category.title}
+                count={category.unreadCount}
+                active={pathname === `/category/${category.id}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Feeds */}
+        <div className="flex-1 overflow-y-auto px-2 pt-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted px-2 py-1.5">
+            Feeds
+          </div>
+          {feeds?.map((feed) => (
+            <FeedItem
+              key={feed.id}
+              href={`/feed/${feed.id}`}
+              icon={
+                feed.iconUrl ? (
+                  <img src={feed.iconUrl} alt="" className="w-5 h-5 rounded" />
+                ) : (
+                  <div className={cn(
+                    "w-5 h-5 rounded bg-gradient-to-br flex items-center justify-center text-[10px] font-bold text-white",
+                    stringToColor(feed.title)
+                  )}>
+                    {feed.title.charAt(0).toUpperCase()}
+                  </div>
+                )
+              }
+              title={feed.title}
+              count={feed.unreadCount}
+              active={pathname === `/feed/${feed.id}`}
+              hasNew={Boolean(feed.unreadCount && feed.unreadCount > 0)}
+            />
+          ))}
+        </div>
+
+        {/* User */}
+        {user && (
+          <div className="p-2 border-t border-default">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-medium">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.username}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="p-1.5 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+// Icon button for the rail
+function NavIconButton({ 
+  href, 
+  icon, 
+  active, 
+  badge 
+}: { 
+  href: string; 
+  icon: React.ReactNode; 
+  active?: boolean;
+  badge?: string | number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "relative w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+        active 
+          ? "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-primary))]" 
+          : "text-muted hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))]"
       )}
-    </aside>
+    >
+      {icon}
+      {badge !== undefined && (
+        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-orange-500 rounded-full text-[10px] text-white font-medium flex items-center justify-center">
+          {badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+// Feed item in the list
+function FeedItem({
+  href,
+  icon,
+  title,
+  count,
+  active,
+  hasNew,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  count?: number;
+  active?: boolean;
+  hasNew?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group flex items-center gap-2 px-2 py-1.5 rounded-lg mb-0.5 transition-all",
+        active 
+          ? "bg-[rgb(var(--bg-hover))]" 
+          : "hover:bg-[rgb(var(--bg-hover))]"
+      )}
+    >
+      <div className="flex-shrink-0">{icon}</div>
+      <span className={cn(
+        "flex-1 text-sm truncate transition-colors",
+        active ? "text-[rgb(var(--text-primary))]" : "text-secondary group-hover:text-[rgb(var(--text-primary))]"
+      )}>
+        {title}
+      </span>
+      {count !== undefined && count > 0 ? (
+        <span className={cn(
+          "text-xs font-medium",
+          active ? "text-orange-500" : "text-muted"
+        )}>
+          {count}
+        </span>
+      ) : hasNew ? (
+        <div className="w-2 h-2 rounded-full bg-orange-500" />
+      ) : null}
+    </Link>
   );
 }
