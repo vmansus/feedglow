@@ -15,7 +15,10 @@ import {
   Search,
   Folder,
   Inbox,
-  Sparkles
+  Sparkles,
+  Compass,
+  BarChart3,
+  Network
 } from 'lucide-react';
 
 // Generate consistent color from string
@@ -84,6 +87,25 @@ export function Sidebar() {
           href="/feeds/add"
           icon={<Plus className="w-5 h-5" />}
           active={pathname === '/feeds/add'}
+        />
+
+        <div className="h-px bg-[rgb(var(--border-default))] my-2 mx-2" />
+
+        {/* Discovery & Analytics */}
+        <NavIconButton
+          href="/discover"
+          icon={<Compass className="w-5 h-5" />}
+          active={pathname === '/discover'}
+        />
+        <NavIconButton
+          href="/knowledge"
+          icon={<Network className="w-5 h-5" />}
+          active={pathname === '/knowledge'}
+        />
+        <NavIconButton
+          href="/stats"
+          icon={<BarChart3 className="w-5 h-5" />}
+          active={pathname === '/stats'}
         />
 
         <div className="flex-1" />

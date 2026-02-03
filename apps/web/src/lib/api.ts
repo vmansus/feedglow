@@ -362,3 +362,152 @@ export async function chatWithEntry(entryId: number, message: string, history?: 
     body: JSON.stringify({ message, history }),
   });
 }
+
+// ============ P1: Discover ============
+
+export interface DiscoverFeed {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  siteUrl?: string;
+  iconUrl?: string;
+  category?: string;
+  subscribers?: number;
+  isSubscribed?: boolean;
+}
+
+export interface DiscoverResponse {
+  feeds: DiscoverFeed[];
+  total: number;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  iconEmoji: string;
+  feeds: DiscoverFeed[];
+}
+
+export interface CollectionsResponse {
+  collections: Collection[];
+}
+
+export async function getRecommendedFeeds(): Promise<DiscoverResponse> {
+  return request<DiscoverResponse>('/api/discover/recommended');
+}
+
+export async function getTrendingFeeds(): Promise<DiscoverResponse> {
+  return request<DiscoverResponse>('/api/discover/trending');
+}
+
+export async function getFeedCollections(): Promise<CollectionsResponse> {
+  return request<CollectionsResponse>('/api/discover/collections');
+}
+
+export async function searchFeeds(query: string): Promise<DiscoverResponse> {
+  return request<DiscoverResponse>(`/api/discover/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function subscribeFeed(url: string): Promise<{ success: boolean; feed?: Feed }> {
+  return request('/api/feeds', {
+    method: 'POST',
+    body: JSON.stringify({ feedUrl: url }),
+  });
+}
+
+// ============ P2: Stats ============
+
+export interface StatsSummary {
+  totalRead: number;
+  totalTime: number;
+  currentStreak: number;
+  longestStreak: number;
+  articlesThisWeek: number;
+  articlesLastWeek: number;
+  averagePerDay: number;
+}
+
+export interface TopicStats {
+  topic: string;
+  count: number;
+  percentage: number;
+}
+
+export interface TopicsResponse {
+  topics: TopicStats[];
+}
+
+export interface DailyStats {
+  date: string;
+  count: number;
+}
+
+export interface TrendsResponse {
+  daily: DailyStats[];
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress?: number;
+  target?: number;
+}
+
+export interface AchievementsResponse {
+  achievements: Achievement[];
+}
+
+export async function getStatsSummary(): Promise<StatsSummary> {
+  return request<StatsSummary>('/api/stats/summary');
+}
+
+export async function getTopicStats(range: 'week' | 'month' | 'year'): Promise<TopicsResponse> {
+  return request<TopicsResponse>(`/api/stats/topics?range=${range}`);
+}
+
+export async function getTrendStats(range: 'week' | 'month' | 'year'): Promise<TrendsResponse> {
+  return request<TrendsResponse>(`/api/stats/trends?range=${range}`);
+}
+
+export async function getAchievements(): Promise<AchievementsResponse> {
+  return request<AchievementsResponse>('/api/stats/achievements');
+}
+
+// ============ P2: Knowledge Graph ============
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: 'article' | 'topic' | 'feed';
+  size?: number;
+}
+
+export interface GraphLink {
+  source: string;
+  target: string;
+  type: 'similar' | 'same_topic' | 'references';
+}
+
+export interface GraphResponse {
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
+
+export interface RelatedEntriesResponse {
+  entries: Entry[];
+}
+
+export async function getKnowledgeGraph(topic?: string): Promise<GraphResponse> {
+  const query = topic ? `?topic=${encodeURIComponent(topic)}` : '';
+  return request<GraphResponse>(`/api/knowledge/graph${query}`);
+}
+
+export async function getRelatedEntries(entryId: string): Promise<RelatedEntriesResponse> {
+  return request<RelatedEntriesResponse>(`/api/knowledge/related/${entryId}`);
+}
