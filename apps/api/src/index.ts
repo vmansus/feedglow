@@ -20,6 +20,8 @@ import settings from './routes/settings.js';
 import opml from './routes/opml.js';
 import events from './routes/events.js';
 import discover from './routes/discover.js';
+import stats from './routes/stats.js';
+import knowledge from './routes/knowledge.js';
 
 const app = new Hono();
 
@@ -101,6 +103,8 @@ app.route('/api/categories', categories);
 app.route('/api/opml', opml);
 app.route('/api/events', events);
 app.route('/api/discover', discover);
+app.route('/api/stats', stats);
+app.route('/api/knowledge', knowledge);
 app.route('/api/webhook', webhook);
 
 // Error handler
