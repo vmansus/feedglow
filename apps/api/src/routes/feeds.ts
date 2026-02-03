@@ -13,7 +13,7 @@ const feeds = new Hono();
 feeds.get('/', async (c) => {
   const client = getMinifluxClient();
   const feedList = await client.getFeeds();
-  return c.json({ feeds: feedList });
+  return c.json(feedList);
 });
 
 // Get single feed

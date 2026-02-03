@@ -13,7 +13,7 @@ const categories = new Hono();
 categories.get('/', async (c) => {
   const client = getMinifluxClient();
   const categoryList = await client.getCategories();
-  return c.json({ categories: categoryList });
+  return c.json(categoryList);
 });
 
 // Create category
