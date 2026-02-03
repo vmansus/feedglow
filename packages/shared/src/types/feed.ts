@@ -1,80 +1,131 @@
 /**
- * Feed types - shared between web and API
+ * FeedGlow Shared Types
+ * Shared between API, Web, and Mobile
  */
 
+// ============ Feed Types ============
+
 export interface Feed {
-  id: string;
+  id: number;
   title: string;
-  url: string;
-  siteUrl?: string;
-  description?: string;
+  siteUrl: string;
+  feedUrl: string;
+  categoryId: number;
+  categoryTitle: string;
   iconUrl?: string;
-  category?: Category;
-  unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
+  disabled: boolean;
+  unreadCount?: number;
+  lastCheckedAt: string;
 }
 
 export interface Category {
-  id: string;
+  id: number;
   title: string;
-  feedCount: number;
+  feedCount?: number;
+  unreadCount?: number;
 }
+
+// ============ Entry Types ============
 
 export interface Entry {
-  id: string;
-  feedId: string;
+  id: number;
+  feedId: number;
+  feedTitle: string;
+  feedIconUrl?: string;
   title: string;
   url: string;
-  author?: string;
+  author: string;
   content: string;
-  summary?: string;
-  aiSummary?: string;
-  aiTranslation?: string;
+  publishedAt: string;
+  readingTime: number;
   status: 'unread' | 'read';
   starred: boolean;
-  publishedAt: string;
-  createdAt: string;
+  // AI-generated fields
+  summary?: string;
+  keyPoints?: string[];
+  translation?: EntryTranslation;
+  tags?: string[];
 }
 
-export interface GetFeedsResponse {
-  feeds: Feed[];
+export interface EntryTranslation {
+  language: string;
+  title: string;
+  content: string;
+  summary?: string;
+}
+
+export interface EntriesResponse {
   total: number;
-}
-
-export interface GetEntriesRequest {
-  feedId?: string;
-  categoryId?: string;
-  status?: 'unread' | 'read' | 'all';
-  starred?: boolean;
-  limit?: number;
-  offset?: number;
-}
-
-export interface GetEntriesResponse {
   entries: Entry[];
+  hasMore: boolean;
+}
+
+// ============ User Types ============
+
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+  isAdmin: boolean;
+  settings: UserSettings;
+}
+
+export interface UserSettings {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  defaultView: 'unread' | 'all' | 'starred';
+  autoSummarize: boolean;
+  autoTranslate: boolean;
+  translateLanguage: string;
+  entriesPerPage: number;
+}
+
+// ============ API Response Types ============
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  status: 'ok' | 'error';
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
   total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
 }
 
-export interface CreateFeedRequest {
-  url: string;
-  categoryId?: string;
+// ============ AI Types ============
+
+export interface SummaryResult {
+  entryId: number;
+  summary: string;
+  keyPoints: string[];
+  readingTime: number;
+  tokens: number;
 }
 
-export interface UpdateEntryRequest {
-  status?: 'unread' | 'read';
-  starred?: boolean;
+export interface TranslationResult {
+  entryId: number;
+  originalTitle: string;
+  title: string;
+  content: string;
+  summary?: string;
+  tokens: number;
 }
 
-export interface AIProcessRequest {
-  entryId: string;
-  action: 'summarize' | 'translate';
-  targetLanguage?: string;
-}
+// ============ Webhook Types ============
 
-export interface AIProcessResponse {
-  entryId: string;
-  result: string;
-  model: string;
-  tokensUsed: number;
+export interface WebhookPayload {
+  eventType: 'new_entries' | 'save_entry';
+  feed: {
+    id: number;
+    title: string;
+  };
+  entries: Array<{
+    id: number;
+    title: string;
+    url: string;
+  }>;
 }
