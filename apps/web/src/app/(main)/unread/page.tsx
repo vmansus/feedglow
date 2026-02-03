@@ -104,9 +104,6 @@ export default function UnreadPage() {
         listHeader={listHeader}
         list={listContent}
         reader={readerContent}
-        defaultListSize={30}
-        minListSize={20}
-        maxListSize={50}
       />
       <KeyboardHelp isOpen={showHelp} onClose={() => setShowHelp(false)} shortcuts={shortcuts} />
     </>
