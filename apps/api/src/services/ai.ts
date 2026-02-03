@@ -72,6 +72,10 @@ function getModel(config: AIConfig) {
 
   switch (config.provider) {
     case 'openai':
+      // Support custom baseUrl for OpenAI-compatible APIs (DeepSeek, etc.)
+      if (config.baseUrl) {
+        return openai(model, { baseURL: config.baseUrl });
+      }
       return openai(model);
     case 'anthropic':
       return anthropic(model);
