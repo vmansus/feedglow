@@ -8,10 +8,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/lib/api';
 
 export function useCategories() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['categories'],
     queryFn: api.getCategories,
   });
+  
+  return {
+    categories: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    mutate: query.refetch,
+  };
 }
 
 export function useCreateCategory() {

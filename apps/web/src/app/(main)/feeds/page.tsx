@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useFeeds, useCategories } from '@/hooks';
 import { Plus, Rss, Folder, ExternalLink, RefreshCw } from 'lucide-react';
+import type { Feed } from '@feedglow/shared';
 
 export default function FeedsPage() {
   const { feeds, isLoading: feedsLoading, mutate: refreshFeeds } = useFeeds();
@@ -12,13 +13,13 @@ export default function FeedsPage() {
 
   // Group feeds by category
   const feedsByCategory = feeds?.reduce((acc, feed) => {
-    const catId = feed.category?.id || 0;
+    const catId = feed.categoryId || 0;
     if (!acc[catId]) {
       acc[catId] = [];
     }
     acc[catId].push(feed);
     return acc;
-  }, {} as Record<number, typeof feeds>) || {};
+  }, {} as Record<number, Feed[]>) || {};
 
   const uncategorized = feedsByCategory[0] || [];
   const categorizedFeeds = Object.entries(feedsByCategory).filter(([id]) => id !== '0');
@@ -112,12 +113,12 @@ export default function FeedsPage() {
   );
 }
 
-function FeedItem({ feed }: { feed: any }) {
+function FeedItem({ feed }: { feed: Feed }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-      {feed.icon_url ? (
+      {feed.iconUrl ? (
         <img
-          src={feed.icon_url}
+          src={feed.iconUrl}
           alt=""
           className="w-6 h-6 rounded"
           onError={(e) => {
@@ -129,17 +130,17 @@ function FeedItem({ feed }: { feed: any }) {
       )}
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{feed.title}</div>
-        <div className="text-sm text-gray-400 truncate">{feed.site_url || feed.feed_url}</div>
+        <div className="text-sm text-gray-400 truncate">{feed.siteUrl || feed.feedUrl}</div>
       </div>
       <div className="flex items-center gap-3 text-sm text-gray-400">
-        {feed.unread_count > 0 && (
+        {(feed.unreadCount ?? 0) > 0 && (
           <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-xs font-medium">
-            {feed.unread_count}
+            {feed.unreadCount}
           </span>
         )}
-        {feed.site_url && (
+        {feed.siteUrl && (
           <a
-            href={feed.site_url}
+            href={feed.siteUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:text-gray-600"

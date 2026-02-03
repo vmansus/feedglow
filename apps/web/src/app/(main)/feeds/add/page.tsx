@@ -8,7 +8,7 @@ export default function AddFeedPage() {
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [categoryId, setCategoryId] = useState<number | undefined>();
-  const { data: categories } = useCategories();
+  const { categories } = useCategories();
   const createFeed = useCreateFeed();
 
   const handleSubmit = async (e: React.FormEvent) => {

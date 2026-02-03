@@ -8,10 +8,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/lib/api';
 
 export function useFeeds() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['feeds'],
     queryFn: api.getFeeds,
   });
+  
+  return {
+    feeds: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    mutate: query.refetch,
+  };
 }
 
 export function useFeed(id: number) {

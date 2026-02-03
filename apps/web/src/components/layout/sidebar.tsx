@@ -37,8 +37,8 @@ function NavItem({ href, icon, label, count, active }: NavItemProps) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: feeds } = useFeeds();
-  const { data: categories } = useCategories();
+  const { feeds } = useFeeds();
+  const { categories } = useCategories();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
 
