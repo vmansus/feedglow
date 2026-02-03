@@ -37,6 +37,32 @@ export function EntryListSkeleton({ count = 5 }: { count?: number }) {
   );
 }
 
+export function FeedHeaderSkeleton() {
+  return (
+    <div className="p-4 animate-pulse">
+      <div className="flex items-center gap-3 mb-3">
+        <Skeleton className="w-7 h-7 rounded" />
+        <Skeleton className="w-8 h-8 rounded" />
+        <div className="flex-1">
+          <Skeleton className="h-5 w-40 mb-1" />
+          <Skeleton className="h-3 w-56" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 mb-3 pl-9">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="flex items-center gap-2 pl-9">
+        <Skeleton className="h-6 w-16 rounded-lg" />
+        <Skeleton className="h-6 w-14 rounded-lg" />
+        <div className="flex-1" />
+        <Skeleton className="h-6 w-6 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 export function ReaderSkeleton() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
