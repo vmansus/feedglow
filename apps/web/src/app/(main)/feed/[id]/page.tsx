@@ -93,7 +93,7 @@ export default function FeedDetailPage() {
             {feed.lastCheckedAt && (
               <>
                 <span>•</span>
-                <span>Updated {new Date(feed.lastCheckedAt).toLocaleDateString()}</span>
+                <span>Updated {new Date(feed.checkedAt).toLocaleDateString()}</span>
               </>
             )}
           </div>

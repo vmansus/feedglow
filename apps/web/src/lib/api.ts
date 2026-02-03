@@ -14,6 +14,31 @@ import { getAuthHeader } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Convert snake_case to camelCase
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+// Transform object keys from snake_case to camelCase
+function transformKeys<T>(obj: unknown): T {
+  if (Array.isArray(obj)) {
+    return obj.map(item => transformKeys(item)) as T;
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const camelKey = snakeToCamel(key);
+      result[camelKey] = transformKeys(value);
+      // Keep original key as well for compatibility
+      if (camelKey !== key) {
+        result[key] = value;
+      }
+    }
+    return result as T;
+  }
+  return obj as T;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -29,7 +54,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(error.error || `HTTP ${res.status}`);
   }
 
-  return res.json();
+  const data = await res.json();
+  return transformKeys<T>(data);
 }
 
 // ============ Feeds ============
