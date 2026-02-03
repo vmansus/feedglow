@@ -8,6 +8,7 @@ import { X } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
 import { ProgressBar } from '@/components/ui/motion';
+import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -25,6 +26,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const summarize = useSummarize();
   const translate = useTranslate();
   const fetchFullContent = useFetchFullContent();
+  const readerSettings = useReaderSettings();
 
   // Sync local state when entry changes
   useEffect(() => {
@@ -168,6 +170,8 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             >
               🔗 Original
             </a>
+
+            <ReaderSettingsButton {...readerSettings} />
           </motion.div>
 
           {/* AI Summary */}
@@ -271,6 +275,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
+            style={getReaderStyles(readerSettings.settings)}
             className={cn(
               "prose dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-orange-600 prose-headings:text-gray-900 dark:prose-headings:text-white",
               showFullContent && "hidden"
