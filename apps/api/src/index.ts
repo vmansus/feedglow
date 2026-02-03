@@ -15,6 +15,8 @@ import feeds from './routes/feeds.js';
 import entries from './routes/entries.js';
 import categories from './routes/categories.js';
 import webhook from './routes/webhook.js';
+import auth from './routes/auth.js';
+import settings from './routes/settings.js';
 
 const app = new Hono();
 
@@ -24,7 +26,11 @@ app.use('*', prettyJSON());
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://feedglow.vmansus.top',
+    ],
     credentials: true,
   })
 );
@@ -56,9 +62,21 @@ app.get('/health', async (c) => {
 app.get('/', (c) => {
   return c.json({
     name: 'FeedGlow API',
-    version: '0.1.0',
+    version: '0.2.0',
     endpoints: {
       health: 'GET /health',
+      auth: {
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me',
+        verify: 'POST /api/auth/verify',
+        logout: 'POST /api/auth/logout',
+      },
+      settings: {
+        get: 'GET /api/settings',
+        update: 'PUT /api/settings',
+        patch: 'PATCH /api/settings/:section',
+        reset: 'DELETE /api/settings',
+      },
       feeds: 'GET /api/feeds',
       entries: 'GET /api/entries',
       categories: 'GET /api/categories',
@@ -68,6 +86,8 @@ app.get('/', (c) => {
 });
 
 // Mount routes
+app.route('/api/auth', auth);
+app.route('/api/settings', settings);
 app.route('/api/feeds', feeds);
 app.route('/api/entries', entries);
 app.route('/api/categories', categories);
