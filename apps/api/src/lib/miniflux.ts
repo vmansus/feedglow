@@ -64,6 +64,12 @@ export interface FeedIcon {
   icon_id: number;
 }
 
+export interface IconData {
+  id: number;
+  data: string;  // base64 encoded
+  mime_type: string;
+}
+
 export interface Entry {
   id: number;
   user_id: number;
@@ -194,6 +200,18 @@ export class MinifluxClient {
 
   async discoverFeeds(url: string): Promise<DiscoverResponse[]> {
     return this.request('POST', '/discover', { url });
+  }
+
+  async getFeedIcon(feedId: number): Promise<IconData | null> {
+    try {
+      return await this.request('GET', `/feeds/${feedId}/icon`);
+    } catch (error) {
+      // Feed may not have an icon
+      if (error instanceof MinifluxError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   // ============ Entries ============

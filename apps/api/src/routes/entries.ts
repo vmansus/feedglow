@@ -18,6 +18,7 @@ import {
   extractContent,
   ContentExtractionError,
 } from '../services/readability.js';
+import { extractThumbnail, extractAllImages } from '../services/thumbnail.js';
 
 const entries = new Hono();
 
@@ -214,6 +215,41 @@ entries.get('/:id/content', async (c) => {
     }
     throw error;
   }
+});
+
+// ============ Thumbnail Extraction ============
+
+// Get entry thumbnail
+entries.get('/:id/thumbnail', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getClient(c);
+  const entry = await client.getEntry(id);
+
+  const thumbnail = extractThumbnail(entry);
+  
+  if (!thumbnail) {
+    return c.json({ error: 'No thumbnail found' }, 404);
+  }
+
+  return c.json({
+    entryId: id,
+    ...thumbnail,
+  });
+});
+
+// Get all images from entry
+entries.get('/:id/images', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getClient(c);
+  const entry = await client.getEntry(id);
+
+  const images = extractAllImages(entry);
+
+  return c.json({
+    entryId: id,
+    images,
+    count: images.length,
+  });
 });
 
 export default entries;

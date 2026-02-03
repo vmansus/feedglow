@@ -116,6 +116,25 @@ feeds.post(
   }
 );
 
+// Get feed icon
+feeds.get('/:id/icon', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getClient(c);
+  const icon = await client.getFeedIcon(id);
+  
+  if (!icon) {
+    return c.json({ error: 'No icon found' }, 404);
+  }
+  
+  // Return as data URL for easy frontend use
+  return c.json({
+    feedId: id,
+    iconId: icon.id,
+    mimeType: icon.mime_type,
+    dataUrl: `data:${icon.mime_type};base64,${icon.data}`,
+  });
+});
+
 // Get feed entries
 feeds.get('/:id/entries', async (c) => {
   const id = parseInt(c.req.param('id'));
