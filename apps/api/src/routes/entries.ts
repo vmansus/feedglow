@@ -21,6 +21,7 @@ import {
 import { extractThumbnail, extractAllImages } from '../services/thumbnail.js';
 import { getFeedScores, calculateEntryScore } from '../services/user-events.js';
 import { chatWithArticle, indexEntry, semanticSearch } from '../services/chat.js';
+import { getReadingProgress, saveReadingProgress, getReadingHistory } from '../services/reading.js';
 
 const entries = new Hono();
 
@@ -364,6 +365,56 @@ entries.get('/ranked', async (c) => {
     total: result.total,
     entries: rankedEntries,
   });
+});
+
+// ============ Reading Progress ============
+
+// Get reading progress for an entry
+entries.get('/:id/progress', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const user = c.get('user') as JWTPayload;
+
+  const progress = await getReadingProgress(user.userId, id);
+
+  if (!progress) {
+    return c.json({ entryId: id, progress: null });
+  }
+
+  return c.json({ entryId: id, progress });
+});
+
+// Save reading progress
+const progressSchema = z.object({
+  scrollPosition: z.number().min(0).max(100),
+  completed: z.boolean().default(false),
+});
+
+entries.post(
+  '/:id/progress',
+  zValidator('json', progressSchema),
+  async (c) => {
+    const id = parseInt(c.req.param('id'));
+    const { scrollPosition, completed } = c.req.valid('json');
+    const user = c.get('user') as JWTPayload;
+
+    const progress = await saveReadingProgress(user.userId, {
+      entryId: id,
+      scrollPosition,
+      completed,
+    });
+
+    return c.json({ success: true, progress });
+  }
+);
+
+// Get reading history
+entries.get('/history', async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const limit = parseInt(c.req.query('limit') || '20');
+
+  const history = await getReadingHistory(user.userId, limit);
+
+  return c.json({ history });
 });
 
 export default entries;

@@ -14,6 +14,10 @@ import {
   DEFAULT_BASE_URLS,
   type AIProvider,
 } from '../services/settings.js';
+import {
+  getReadingPreferences,
+  updateReadingPreferences,
+} from '../services/reading.js';
 
 const settings = new Hono();
 
@@ -104,6 +108,39 @@ settings.post('/ai/test', zValidator('json', testAISchema), async (c) => {
   );
   
   return c.json(result);
+});
+
+// ============ Reading Preferences ============
+
+// Get reading preferences
+settings.get('/reading', async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const preferences = await getReadingPreferences(user.userId);
+  return c.json(preferences);
+});
+
+// Update reading preferences
+const readingPrefsSchema = z.object({
+  fontSize: z.number().min(14).max(24).optional(),
+  fontFamily: z.enum(['sans', 'serif', 'mono']).optional(),
+  lineHeight: z.number().min(1.4).max(2.0).optional(),
+  contentWidth: z.enum(['narrow', 'medium', 'wide']).optional(),
+  theme: z.enum(['light', 'dark', 'sepia', 'system']).optional(),
+  autoMarkRead: z.boolean().optional(),
+  showImages: z.boolean().optional(),
+  showReadingTime: z.boolean().optional(),
+});
+
+settings.put('/reading', zValidator('json', readingPrefsSchema), async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const updates = c.req.valid('json');
+  
+  const preferences = await updateReadingPreferences(user.userId, updates);
+  
+  return c.json({
+    success: true,
+    preferences,
+  });
 });
 
 export default settings;
