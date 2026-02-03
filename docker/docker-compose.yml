@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: feedglow-db
+    environment:
+      POSTGRES_USER: feedglow
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-feedglow_dev}
+      POSTGRES_DB: feedglow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'feedglow']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feedglow
+
+  # Miniflux RSS Engine
+  miniflux:
+    image: miniflux/miniflux:latest
+    container_name: feedglow-miniflux
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://feedglow:${DB_PASSWORD:-feedglow_dev}@postgres/feedglow?sslmode=disable
+      RUN_MIGRATIONS: 1
+      CREATE_ADMIN: 1
+      ADMIN_USERNAME: ${MINIFLUX_ADMIN:-admin}
+      ADMIN_PASSWORD: ${MINIFLUX_PASSWORD:-feedglow_admin}
+      POLLING_FREQUENCY: 15
+      BATCH_SIZE: 10
+      WORKER_POOL_SIZE: 5
+      WEBHOOK_URL: http://api:3001/api/webhook/miniflux
+    ports:
+      - '8080:8080'
+    networks:
+      - feedglow
+
+  # FeedGlow API
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: feedglow-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      miniflux:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://feedglow:${DB_PASSWORD:-feedglow_dev}@postgres/feedglow
+      MINIFLUX_URL: http://miniflux:8080
+      MINIFLUX_API_KEY: ${MINIFLUX_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    ports:
+      - '3001:3001'
+    networks:
+      - feedglow
+
+  # FeedGlow Web
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    container_name: feedglow-web
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - '3000:3000'
+    networks:
+      - feedglow
+
+  # RSSHub (Optional)
+  rsshub:
+    image: diygod/rsshub:chromium-bundled
+    container_name: feedglow-rsshub
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: memory
+      CACHE_EXPIRE: 300
+    ports:
+      - '1200:1200'
+    networks:
+      - feedglow
+    profiles:
+      - extended
+
+volumes:
+  postgres_data:
+
+networks:
+  feedglow:
+    driver: bridge
