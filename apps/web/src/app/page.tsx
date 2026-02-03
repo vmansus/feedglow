@@ -16,7 +16,7 @@ export default function Home() {
             Get Started
           </a>
           <a
-            href="https://github.com/user/feedglow"
+            href="https://github.com/vmansus/feedglow"
             className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           >
             GitHub
