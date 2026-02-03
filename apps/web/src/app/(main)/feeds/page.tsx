@@ -1,15 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useFeeds, useCategories } from '@/hooks';
-import { Plus, Rss, Folder, ExternalLink, RefreshCw } from 'lucide-react';
+import { useRef } from 'react';
+import { useFeeds, useCategories, useExportOpml, useImportOpml } from '@/hooks';
+import { Plus, Rss, Folder, ExternalLink, RefreshCw, Download, Upload } from 'lucide-react';
 import type { Feed } from '@feedglow/shared';
 
 export default function FeedsPage() {
   const { feeds, isLoading: feedsLoading, mutate: refreshFeeds } = useFeeds();
   const { categories, isLoading: categoriesLoading } = useCategories();
+  const exportOpml = useExportOpml();
+  const importOpml = useImportOpml();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isLoading = feedsLoading || categoriesLoading;
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      importOpml.mutate(file);
+      e.target.value = ''; // Reset input
+    }
+  };
 
   // Group feeds by category
   const feedsByCategory = feeds?.reduce((acc, feed) => {
@@ -37,9 +53,33 @@ export default function FeedsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Feeds</h1>
         <div className="flex gap-2">
+          {/* Hidden file input for OPML import */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".opml,.xml"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            onClick={() => exportOpml.mutate()}
+            disabled={exportOpml.isPending}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+            title="Export OPML"
+          >
+            <Download className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleImportClick}
+            disabled={importOpml.isPending}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+            title="Import OPML"
+          >
+            <Upload className="w-5 h-5" />
+          </button>
           <button
             onClick={() => refreshFeeds()}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-5 h-5" />

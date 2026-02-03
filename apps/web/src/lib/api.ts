@@ -180,6 +180,43 @@ export async function deleteCategory(id: number): Promise<void> {
   await request(`/api/categories/${id}`, { method: 'DELETE' });
 }
 
+// ============ OPML ============
+
+export async function exportOpml(): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/opml/export`, {
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `HTTP ${res.status}`);
+  }
+
+  return res.blob();
+}
+
+export async function importOpml(file: File): Promise<{ success: boolean; message: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/api/opml/import`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeader(),
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
 // ============ Health ============
 
 export async function healthCheck(): Promise<{ status: string; miniflux: string }> {

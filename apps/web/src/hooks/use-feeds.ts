@@ -91,3 +91,40 @@ export function useRefreshAllFeeds() {
     },
   });
 }
+
+export function useExportOpml() {
+  return useMutation({
+    mutationFn: api.exportOpml,
+    onSuccess: (blob) => {
+      // Download the file
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'feedglow-subscriptions.opml';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('OPML exported!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to export OPML');
+    },
+  });
+}
+
+export function useImportOpml() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.importOpml,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('OPML imported successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to import OPML');
+    },
+  });
+}

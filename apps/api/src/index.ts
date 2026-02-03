@@ -17,6 +17,7 @@ import categories from './routes/categories.js';
 import webhook from './routes/webhook.js';
 import auth from './routes/auth.js';
 import settings from './routes/settings.js';
+import opml from './routes/opml.js';
 
 const app = new Hono();
 
@@ -80,6 +81,10 @@ app.get('/', (c) => {
       feeds: 'GET /api/feeds',
       entries: 'GET /api/entries',
       categories: 'GET /api/categories',
+      opml: {
+        export: 'GET /api/opml/export',
+        import: 'POST /api/opml/import',
+      },
       webhook: 'POST /api/webhook/miniflux',
     },
   });
@@ -91,6 +96,7 @@ app.route('/api/settings', settings);
 app.route('/api/feeds', feeds);
 app.route('/api/entries', entries);
 app.route('/api/categories', categories);
+app.route('/api/opml', opml);
 app.route('/api/webhook', webhook);
 
 // Error handler
