@@ -6,8 +6,8 @@ import { Plus, Rss, Folder, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Feed } from '@feedglow/shared';
 
 export default function FeedsPage() {
-  const { data: feeds, isLoading: feedsLoading, refetch: refreshFeeds } = useFeeds();
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { feeds, isLoading: feedsLoading, mutate: refreshFeeds } = useFeeds();
+  const { categories, isLoading: categoriesLoading } = useCategories();
 
   const isLoading = feedsLoading || categoriesLoading;
 

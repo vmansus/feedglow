@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@feedglow/ui';
 import { useFeeds, useCategories } from '@/hooks';
+import { useAuth } from '@/contexts/auth-context';
+import { LogOut, User } from 'lucide-react';
 
 interface NavItemProps {
   href: string;
@@ -39,6 +41,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { feeds } = useFeeds();
   const { categories } = useCategories();
+  const { user, logout } = useAuth();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
 
@@ -115,7 +118,7 @@ export function Sidebar() {
         {feeds && feeds.length > 10 && (
           <Link
             href="/feeds"
-            className="block px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+            className="block px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           >
             View all {feeds.length} feeds →
           </Link>
@@ -137,6 +140,28 @@ export function Sidebar() {
           active={pathname === '/settings'}
         />
       </div>
+
+      {/* User section */}
+      {user && (
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
+              <User className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate dark:text-white">{user.username}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Connected</p>
+            </div>
+            <button
+              onClick={logout}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

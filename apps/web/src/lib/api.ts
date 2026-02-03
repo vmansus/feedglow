@@ -10,6 +10,7 @@ import type {
   SummaryResult,
   TranslationResult,
 } from '@feedglow/shared';
+import { getAuthHeader } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -18,6 +19,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeader(),
       ...options?.headers,
     },
   });

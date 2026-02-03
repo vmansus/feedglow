@@ -12,7 +12,7 @@ export default function CategoryPage() {
   const params = useParams();
   const categoryId = Number(params.id);
   
-  const { data: categories } = useCategories();
+  const { categories } = useCategories();
   const { data: entriesData, isLoading } = useEntries({ categoryId });
   
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
