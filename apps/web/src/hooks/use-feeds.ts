@@ -5,6 +5,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import * as api from '@/lib/api';
 
 export function useFeeds() {
@@ -37,6 +38,10 @@ export function useCreateFeed() {
       api.createFeed(url, categoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      toast.success('Feed added successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add feed');
     },
   });
 }
@@ -48,6 +53,10 @@ export function useDeleteFeed() {
     mutationFn: api.deleteFeed,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      toast.success('Feed deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete feed');
     },
   });
 }
@@ -59,6 +68,10 @@ export function useRefreshFeed() {
     mutationFn: api.refreshFeed,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['entries'] });
+      toast.success('Feed refreshed!');
+    },
+    onError: () => {
+      toast.error('Failed to refresh feed');
     },
   });
 }
@@ -71,6 +84,10 @@ export function useRefreshAllFeeds() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['entries'] });
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      toast.success('All feeds refreshed!');
+    },
+    onError: () => {
+      toast.error('Failed to refresh feeds');
     },
   });
 }

@@ -16,8 +16,8 @@ export default function AddFeedPage() {
     try {
       await createFeed.mutateAsync({ url, categoryId });
       router.push('/unread');
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch {
+      // Error is handled by the mutation's onError callback
     }
   };
 

@@ -13,6 +13,7 @@
   "dependencies": {
     "@feedglow/shared": "workspace:*",
     "@feedglow/ui": "workspace:*",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-query-devtools": "^5.0.0",
     "ai": "^3.0.0",
@@ -21,6 +22,7 @@
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "react-hot-toast": "^2.6.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
