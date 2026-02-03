@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useMarkAsRead, useMarkAsUnread, useToggleBookmark } from '@/hooks';
@@ -11,19 +12,21 @@ import { EntryListSkeleton } from '@/components/ui/skeleton';
 import { AllCaughtUpState } from '@/components/ui/empty-state';
 import { SwipeableEntry } from './swipeable-entry';
 
-interface EntryListProps {
+interface VirtualizedEntryListProps {
   entries: Entry[];
   selectedId?: number;
   onSelect: (entry: Entry) => void;
   isLoading?: boolean;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 }
+
+const ITEM_HEIGHT = 96; // Approximate height of each entry item
 
 // Extract thumbnail from entry content
 function extractThumbnail(entry: Entry): string | null {
-  // Check if entry has explicit image
   if ((entry as any).imageUrl) return (entry as any).imageUrl;
   
-  // Check enclosures (Miniflux uses snake_case: mime_type)
   if ((entry as any).enclosures?.length) {
     const img = (entry as any).enclosures.find((e: any) => 
       e.mime_type?.startsWith('image/') || e.mimeType?.startsWith('image/')
@@ -31,14 +34,12 @@ function extractThumbnail(entry: Entry): string | null {
     if (img?.url) return img.url;
   }
   
-  // Try to extract from content - skip tracking pixels and icons
   if (entry.content) {
     const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     let match;
     while ((match = imgRegex.exec(entry.content)) !== null) {
       const url = match[1];
       const lowerUrl = url.toLowerCase();
-      // Skip common tracking/pixel patterns
       const skipPatterns = ['pixel', 'tracking', 'beacon', 'spacer', '1x1', 'blank.gif', 
         'clear.gif', 'favicon', 'icon', 'logo', 'badge', 'button', 'analytics', 'feedburner'];
       if (!skipPatterns.some(p => lowerUrl.includes(p))) {
@@ -50,7 +51,20 @@ function extractThumbnail(entry: Entry): string | null {
   return null;
 }
 
-export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryListProps) {
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+export function VirtualizedEntryList({ 
+  entries, 
+  selectedId, 
+  onSelect, 
+  isLoading,
+  onLoadMore,
+  hasMore,
+}: VirtualizedEntryListProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
   const markAsRead = useMarkAsRead();
   const markAsUnread = useMarkAsUnread();
   const toggleBookmark = useToggleBookmark();
@@ -59,6 +73,43 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
   useEffect(() => {
     setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
   }, []);
+
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 5,
+  });
+
+  const items = virtualizer.getVirtualItems();
+
+  // Infinite scroll - load more when near bottom
+  const handleScroll = useCallback(() => {
+    if (!parentRef.current || !onLoadMore || !hasMore) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = parentRef.current;
+    if (scrollHeight - scrollTop - clientHeight < 500) {
+      onLoadMore();
+    }
+  }, [onLoadMore, hasMore]);
+
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedId) {
+      const index = entries.findIndex(e => e.id === selectedId);
+      if (index !== -1) {
+        virtualizer.scrollToIndex(index, { align: 'center', behavior: 'smooth' });
+      }
+    }
+  }, [selectedId, entries, virtualizer]);
 
   const handleSelect = (entry: Entry) => {
     onSelect(entry);
@@ -81,21 +132,24 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
   }
 
   return (
-    <div>
-      <AnimatePresence mode="popLayout">
-        {entries.map((entry, index) => {
+    <div ref={parentRef} className="h-full overflow-y-auto">
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {items.map((virtualItem) => {
+          const entry = entries[virtualItem.index];
           const thumbnail = extractThumbnail(entry);
           const isSelected = selectedId === entry.id;
           const isUnread = entry.status === 'unread';
 
           const entryContent = (
             <motion.article
-              key={entry.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
-              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               onClick={() => handleSelect(entry)}
               className={cn(
                 'p-4 cursor-pointer transition-all border-b border-default relative',
@@ -104,7 +158,6 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
                   : 'hover:bg-[rgb(var(--bg-hover))]'
               )}
             >
-              {/* Selected indicator - glow bar */}
               {isSelected && (
                 <div 
                   className="absolute left-0 top-0 bottom-0 w-1" 
@@ -116,16 +169,13 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
               )}
 
               <div className="flex gap-3">
-                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  {/* Meta */}
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-xs text-muted">
                       {formatDistanceToNow(new Date(entry.publishedAt), { addSuffix: false })}
                     </span>
                   </div>
 
-                  {/* Title */}
                   <h3
                     className={cn(
                       'text-sm mb-1.5 line-clamp-2 leading-snug',
@@ -137,13 +187,11 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
                     {entry.title}
                   </h3>
 
-                  {/* Summary */}
                   <p className="text-xs text-muted line-clamp-2 leading-relaxed">
                     {entry.summary || stripHtml(entry.content).slice(0, 150)}
                   </p>
                 </div>
 
-                {/* Thumbnail */}
                 {thumbnail && (
                   <div className="flex-shrink-0">
                     <img 
@@ -161,7 +209,6 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
                   </div>
                 )}
 
-                {/* Star button - hidden on mobile (use swipe instead) */}
                 {!isMobile && (
                   <button
                     onClick={(e) => handleBookmark(e, entry)}
@@ -179,30 +226,42 @@ export function EntryList({ entries, selectedId, onSelect, isLoading }: EntryLis
             </motion.article>
           );
 
-          // Wrap with SwipeableEntry on mobile
-          if (isMobile) {
-            return (
-              <SwipeableEntry
-                key={entry.id}
-                entry={entry}
-                onMarkRead={() => markAsRead.mutate(entry.id)}
-                onMarkUnread={() => markAsUnread.mutate(entry.id)}
-                onToggleStar={() => toggleBookmark.mutate(entry.id)}
-              >
-                {entryContent}
-              </SwipeableEntry>
-            );
-          }
+          const content = isMobile ? (
+            <SwipeableEntry
+              entry={entry}
+              onMarkRead={() => markAsRead.mutate(entry.id)}
+              onMarkUnread={() => markAsUnread.mutate(entry.id)}
+              onToggleStar={() => toggleBookmark.mutate(entry.id)}
+            >
+              {entryContent}
+            </SwipeableEntry>
+          ) : entryContent;
 
-          return entryContent;
+          return (
+            <div
+              key={entry.id}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+            >
+              {content}
+            </div>
+          );
         })}
-      </AnimatePresence>
+      </div>
+      
+      {/* Loading indicator for infinite scroll */}
+      {hasMore && (
+        <div className="py-4 text-center text-sm text-muted">
+          Loading more...
+        </div>
+      )}
     </div>
   );
-}
-
-// Helper to strip HTML tags
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }

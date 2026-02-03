@@ -153,56 +153,81 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           {/* AI Summary Card - Glow Feature */}
           {(entry.summary || summarize.data) ? (
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-5 rounded-2xl border border-orange-500/40"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="mb-8 p-5 rounded-2xl border-2 border-orange-500/50 relative overflow-hidden"
               style={{ 
-                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%)',
-                boxShadow: '0 0 40px rgba(249, 115, 22, 0.25), 0 0 80px rgba(249, 115, 22, 0.1), inset 0 1px 0 rgba(255,255,255,0.1)' 
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.08) 50%, rgba(249, 115, 22, 0.05) 100%)',
+                boxShadow: `
+                  0 0 20px rgba(249, 115, 22, 0.4),
+                  0 0 40px rgba(249, 115, 22, 0.3),
+                  0 0 60px rgba(249, 115, 22, 0.2),
+                  0 0 80px rgba(249, 115, 22, 0.1),
+                  inset 0 1px 0 rgba(255,255,255,0.15)
+                ` 
               }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-4 h-4 text-white" />
+              {/* Animated glow pulse */}
+              <div 
+                className="absolute inset-0 rounded-2xl animate-pulse"
+                style={{ 
+                  background: 'radial-gradient(circle at 30% 30%, rgba(249, 115, 22, 0.15), transparent 60%)',
+                  pointerEvents: 'none'
+                }}
+              />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <div 
+                    className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center"
+                    style={{ boxShadow: '0 0 15px rgba(249, 115, 22, 0.6)' }}
+                  >
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-bold text-orange-400 text-lg tracking-tight">AI Summary</span>
                 </div>
-                <span className="font-semibold text-orange-400 text-lg">AI Summary</span>
+                <p className="text-secondary text-sm leading-relaxed">
+                  {summarize.data?.summary || entry.summary}
+                </p>
+                {(summarize.data?.keyPoints || entry.keyPoints) && (
+                  <ul className="mt-4 space-y-2">
+                    {(summarize.data?.keyPoints || entry.keyPoints)?.map((point, i) => (
+                      <li key={i} className="text-xs text-muted flex items-start gap-2">
+                        <span className="text-orange-400 mt-0.5">▸</span>
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <p className="text-secondary text-sm leading-relaxed">
-                {summarize.data?.summary || entry.summary}
-              </p>
-              {(summarize.data?.keyPoints || entry.keyPoints) && (
-                <ul className="mt-3 space-y-1">
-                  {(summarize.data?.keyPoints || entry.keyPoints)?.map((point, i) => (
-                    <li key={i} className="text-xs text-muted flex items-start gap-2">
-                      <span className="text-orange-400">•</span>
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </motion.div>
           ) : (
-            <div 
-              className="mb-8 p-5 rounded-2xl border border-orange-500/30"
+            <motion.div 
+              whileHover={{ scale: 1.01 }}
+              className="mb-8 p-5 rounded-2xl border border-orange-500/30 cursor-pointer transition-all hover:border-orange-500/50"
               style={{ 
                 background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.03) 100%)',
                 boxShadow: '0 0 30px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)' 
               }}
+              onClick={() => !summarize.isPending && summarize.mutate(entry.id)}
             >
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500/50 to-orange-600/50 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/40 to-orange-600/40 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-orange-300" />
                 </div>
                 <span className="font-semibold text-orange-400 text-lg">AI Summary</span>
               </div>
-              <button
-                onClick={() => summarize.mutate(entry.id)}
-                disabled={summarize.isPending}
-                className="text-sm text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50"
-              >
-                {summarize.isPending ? 'Generating...' : 'Generate summary →'}
-              </button>
-            </div>
+              <p className="text-sm text-orange-400/80 hover:text-orange-300 transition-colors">
+                {summarize.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+                    Generating...
+                  </span>
+                ) : (
+                  'Click to generate AI summary →'
+                )}
+              </p>
+            </motion.div>
           )}
 
           {/* Action Buttons */}

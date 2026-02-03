@@ -1,61 +1,68 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
+import { applyTheme, getThemeById, type CustomTheme } from '@/lib/themes';
 
 interface ThemeContextType {
-  theme: Theme;
-  resolvedTheme: 'light' | 'dark';
-  setTheme: (theme: Theme) => void;
+  presetId: string;
+  customAccent: string | null;
+  isDark: boolean;
+  setPreset: (presetId: string) => void;
+  setAccent: (accent: string | null) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+const STORAGE_KEY = 'feedglow-theme';
+const DEFAULT_THEME = 'dark-default';
 
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [presetId, setPresetId] = useState<string>(DEFAULT_THEME);
+  const [customAccent, setCustomAccent] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(true);
+
+  // Load saved theme on mount
   useEffect(() => {
-    // Load saved theme from localStorage
-    const saved = localStorage.getItem('theme') as Theme | null;
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setThemeState(saved);
+      try {
+        const parsed: CustomTheme = JSON.parse(saved);
+        if (getThemeById(parsed.presetId)) {
+          setPresetId(parsed.presetId);
+          setCustomAccent(parsed.customAccent || null);
+        }
+      } catch {
+        // Invalid saved theme, use default
+      }
     }
   }, []);
 
+  // Apply theme when it changes
   useEffect(() => {
-    const root = document.documentElement;
-    
-    const applyTheme = (isDark: boolean) => {
-      if (isDark) {
-        root.classList.add('dark');
-        setResolvedTheme('dark');
-      } else {
-        root.classList.remove('dark');
-        setResolvedTheme('light');
-      }
-    };
+    const preset = getThemeById(presetId);
+    if (!preset) return;
 
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mediaQuery.matches);
-      
-      const handler = (e: MediaQueryListEvent) => applyTheme(e.matches);
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    } else {
-      applyTheme(theme === 'dark');
+    applyTheme(preset, customAccent || undefined);
+    setIsDark(preset.isDark);
+
+    // Save to localStorage
+    const toSave: CustomTheme = { presetId };
+    if (customAccent) toSave.customAccent = customAccent;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  }, [presetId, customAccent]);
+
+  const setPreset = (newPresetId: string) => {
+    if (getThemeById(newPresetId)) {
+      setPresetId(newPresetId);
     }
-  }, [theme]);
+  };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
+  const setAccent = (accent: string | null) => {
+    setCustomAccent(accent);
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ presetId, customAccent, isDark, setPreset, setAccent }}>
       {children}
     </ThemeContext.Provider>
   );

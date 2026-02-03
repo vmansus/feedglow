@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTheme } from '@/contexts/theme-context';
-import { Sun, Moon, Monitor, Save, RefreshCw } from 'lucide-react';
+import { Save, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AISettings } from '@/components/settings/ai-settings';
+import { ThemeSettings } from '@/components/settings/theme-settings';
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
   const [apiUrl, setApiUrl] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState('25');
   const [autoMarkRead, setAutoMarkRead] = useState(true);
@@ -37,48 +36,16 @@ export default function SettingsPage() {
     }
   };
 
-  const themeOptions: { value: 'light' | 'dark' | 'system'; label: string; icon: typeof Sun }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ];
-
   return (
     <div className="h-full overflow-y-auto surface-base">
       <div className="max-w-2xl mx-auto p-6">
         <h1 className="text-2xl font-bold mb-6 text-[rgb(var(--text-primary))]">Settings</h1>
 
         <div className="space-y-6">
-          {/* Appearance */}
+          {/* Appearance - Theme & Accent */}
           <section className="surface-elevated rounded-xl border border-default p-6">
             <h2 className="text-lg font-semibold mb-4 text-[rgb(var(--text-primary))]">Appearance</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-2">
-                  Theme
-                </label>
-                <div className="flex gap-2">
-                  {themeOptions.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => setTheme(option.value)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                          theme === option.value
-                            ? 'bg-orange-500 text-white border-orange-500'
-                            : 'surface-elevated text-secondary border-default hover:border-orange-500/50'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            <ThemeSettings />
           </section>
 
           {/* Reading */}
