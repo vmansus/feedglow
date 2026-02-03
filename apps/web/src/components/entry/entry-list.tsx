@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
 import type { Entry } from '@feedglow/shared';
