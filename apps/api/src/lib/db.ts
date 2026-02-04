@@ -244,5 +244,39 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_fg_notif_rules_user ON fg_notification_rules(user_id)
   `);
 
+  // ============ P2: Integrations ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_integrations (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      service VARCHAR(50) NOT NULL,
+      enabled BOOLEAN DEFAULT true,
+      config TEXT DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, service)
+    )
+  `);
+
+  // ============ P2: AI Filters ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_ai_filters (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name VARCHAR(200) NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      action VARCHAR(20) NOT NULL DEFAULT 'highlight',
+      tag_name VARCHAR(100),
+      enabled BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_ai_filters_user ON fg_ai_filters(user_id)
+  `);
+
   console.log('[DB] Migrations complete');
 }

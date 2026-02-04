@@ -535,6 +535,66 @@ entries.post(
   }
 );
 
+// ============ Sync & Offline (P2 #20) ============
+
+// Get offline pack (latest unread entries with full content)
+entries.get('/offline-pack', async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const limit = parseInt(c.req.query('limit') || '20');
+  const client = getClient(c);
+
+  const result = await client.getEntries({
+    status: 'unread',
+    limit: Math.min(limit, 50),
+    order: 'published_at',
+    direction: 'desc',
+  });
+
+  return c.json({
+    generated_at: new Date().toISOString(),
+    count: result.entries.length,
+    entries: result.entries.map(e => ({
+      id: e.id,
+      title: e.title,
+      url: e.url,
+      author: e.author,
+      content: e.content,
+      published_at: e.published_at,
+      feed_id: e.feed_id,
+      feed_title: e.feed?.title,
+      reading_time: e.reading_time,
+      starred: e.starred,
+      enclosures: e.enclosures,
+    })),
+  });
+});
+
+// Incremental sync (get changes since timestamp)
+entries.get('/sync', async (c) => {
+  const since = c.req.query('since');
+  if (!since) {
+    return c.json({ error: 'Parameter "since" (unix timestamp) is required' }, 400);
+  }
+
+  const sinceTs = parseInt(since);
+  const client = getClient(c);
+
+  const result = await client.getEntries({
+    after: sinceTs,
+    limit: 200,
+    order: 'published_at',
+    direction: 'desc',
+  });
+
+  return c.json({
+    since: sinceTs,
+    sync_at: Math.floor(Date.now() / 1000),
+    count: result.entries.length,
+    total: result.total,
+    entries: result.entries,
+  });
+});
+
 // Get reading history
 entries.get('/history', async (c) => {
   const user = c.get('user') as JWTPayload;

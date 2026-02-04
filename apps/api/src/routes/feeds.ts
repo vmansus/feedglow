@@ -216,4 +216,61 @@ feeds.get('/:id/entries', async (c) => {
   return c.json(entries);
 });
 
+// ============ Subscribe from URL (P2 #22 - browser extension) ============
+
+const subscribeSchema = z.object({
+  url: z.string().url(),
+  categoryId: z.number().optional(),
+});
+
+feeds.post(
+  '/subscribe',
+  zValidator('json', subscribeSchema),
+  async (c) => {
+    const { url, categoryId } = c.req.valid('json');
+    const client = getClient(c);
+
+    // Auto-discover RSS from any URL
+    try {
+      const discovered = await client.discoverFeeds(url);
+      if (discovered.length === 0) {
+        return c.json({ error: 'No RSS feed found at this URL' }, 404);
+      }
+
+      if (discovered.length === 1) {
+        // Auto-subscribe to the single discovered feed
+        const feed = await client.createFeed(discovered[0].url, categoryId || 0);
+        return c.json({ subscribed: true, feed, discovered: discovered });
+      }
+
+      // Multiple feeds found, return choices
+      return c.json({ subscribed: false, discovered, message: 'Multiple feeds found. Choose one to subscribe.' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: `Failed to discover feed: ${msg}` }, 400);
+    }
+  }
+);
+
+// ============ Feed Analytics (P2 #23) ============
+
+feeds.get('/analytics', async (c) => {
+  const { getFeedAnalytics } = await import('../services/feed-analytics.js');
+  const user = c.get('user') as any;
+  const client = getClient(c);
+  const analytics = await getFeedAnalytics(client, user.userId);
+  return c.json(analytics);
+});
+
+// Get stats for single feed
+feeds.get('/:id/stats', async (c) => {
+  const { getFeedStats } = await import('../services/feed-analytics.js');
+  const id = parseInt(c.req.param('id'));
+  const user = c.get('user') as any;
+  const client = getClient(c);
+  const feed = await client.getFeed(id);
+  const stats = await getFeedStats(client, feed, user.userId);
+  return c.json(stats);
+});
+
 export default feeds;

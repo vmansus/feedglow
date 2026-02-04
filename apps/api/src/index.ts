@@ -28,6 +28,8 @@ import shares from './routes/shares.js';
 import digest from './routes/digest.js';
 import notifications from './routes/notifications.js';
 import exports_ from './routes/exports.js';
+import integrations from './routes/integrations.js';
+import aiFilters from './routes/ai-filters.js';
 
 const app = new Hono();
 
@@ -116,6 +118,8 @@ app.route('/api/shared', shares);
 app.route('/api/digest', digest);
 app.route('/api/notifications', notifications);
 app.route('/api/export', exports_);
+app.route('/api/integrations', integrations);
+app.route('/api/ai/filters', aiFilters);
 app.route('/api/webhook', webhook);
 
 // Error handler
