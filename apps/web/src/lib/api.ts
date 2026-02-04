@@ -12,7 +12,7 @@ import type {
 } from '@feedglow/shared';
 import { getAuthHeader } from './auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.vmansus.top';
 
 // Convert snake_case to camelCase
 function snakeToCamel(str: string): string {

@@ -2,7 +2,7 @@
  * Auth API client
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.vmansus.top';
 
 export interface User {
   id: number;
