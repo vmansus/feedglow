@@ -76,9 +76,9 @@ export function EntryFiltersBar({
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-default bg-[rgb(var(--bg-base))]">
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-default bg-[rgb(var(--bg-base))] overflow-x-auto flex-nowrap">
       {/* Sort Dropdown */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <button
           onClick={() => setShowSortMenu(!showSortMenu)}
           className="btn-ghost flex items-center gap-1.5 text-xs"
@@ -139,10 +139,10 @@ export function EntryFiltersBar({
         )}
       </div>
 
-      <div className="h-4 w-px bg-[rgb(var(--border-default))]" />
+      <div className="h-4 w-px bg-[rgb(var(--border-default))] flex-shrink-0" />
 
       {/* Status Filter */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={() => onChange({ ...filters, status: 'all' })}
           className={cn(
@@ -180,13 +180,13 @@ export function EntryFiltersBar({
         </button>
       </div>
 
-      <div className="h-4 w-px bg-[rgb(var(--border-default))]" />
+      <div className="h-4 w-px bg-[rgb(var(--border-default))] flex-shrink-0" />
 
       {/* Starred Filter */}
       <button
         onClick={() => onChange({ ...filters, starred: !filters.starred })}
         className={cn(
-          "px-2 py-1 rounded text-xs transition-colors flex items-center gap-1",
+          "px-2 py-1 rounded text-xs transition-colors flex items-center gap-1 flex-shrink-0",
           filters.starred 
             ? "bg-yellow-500/20 text-yellow-500" 
             : "text-muted hover:text-[rgb(var(--text-secondary))]"
