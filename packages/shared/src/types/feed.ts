@@ -106,13 +106,18 @@ export interface SummaryResult {
   tokens: number;
 }
 
+export interface TranslationParagraph {
+  original: string;
+  translated: string;
+}
+
 export interface TranslationResult {
   entryId: number;
-  originalTitle: string;
   title: string;
-  content: string;
+  translatedTitle: string;
+  paragraphs: TranslationParagraph[];
   summary?: string;
-  tokens: number;
+  tokens?: number;
 }
 
 // ============ Webhook Types ============

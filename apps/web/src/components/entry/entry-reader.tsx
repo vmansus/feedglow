@@ -266,17 +266,36 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default"
+                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default space-y-4"
                 >
-                  <h4 className="font-medium mb-2 text-[rgb(var(--text-primary))]">
-                    {translate.data?.title || entry.translation?.title}
-                  </h4>
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html: translate.data?.content || entry.translation?.content || '',
-                    }}
-                  />
+                  {/* Translated Title */}
+                  <div>
+                    <h4 className="font-medium text-[rgb(var(--text-primary))]">
+                      {translate.data?.translatedTitle || entry.translation?.translatedTitle}
+                    </h4>
+                    <p className="text-sm text-muted mt-1">
+                      原文: {translate.data?.title || entry.translation?.title}
+                    </p>
+                  </div>
+
+                  {/* Summary */}
+                  {(translate.data?.summary || entry.translation?.summary) && (
+                    <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                      <p className="text-sm text-[rgb(var(--text-primary))]">
+                        📝 {translate.data?.summary || entry.translation?.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Paragraph-by-paragraph comparison */}
+                  <div className="space-y-4">
+                    {(translate.data?.paragraphs || entry.translation?.paragraphs)?.map((para, i) => (
+                      <div key={i} className="border-l-2 border-orange-500/30 pl-3">
+                        <p className="text-[rgb(var(--text-primary))] mb-2">{para.translated}</p>
+                        <p className="text-sm text-muted">{para.original}</p>
+                      </div>
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </div>
