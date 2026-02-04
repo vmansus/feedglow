@@ -36,8 +36,8 @@ export class AIRateLimitError extends Error {
   }
 }
 
-// Default timeout for AI requests (30 seconds)
-const AI_TIMEOUT_MS = 60000;
+// Default timeout for AI requests (2 minutes for translation)
+const AI_TIMEOUT_MS = 120000;
 
 export interface AIConfig {
   provider: 'openai' | 'anthropic' | 'ollama';
@@ -183,24 +183,18 @@ export async function translateArticle(
     .map((p, i) => `[P${i + 1}] ${p}`)
     .join('\n');
 
-  const prompt = `Translate this article to ${targetLanguage}. 
-
-CRITICAL: Return a JSON object with EXACTLY ${paragraphs.length} paragraphs in the "pairs" array, one for each [P#] marker.
-Do NOT merge, split, or skip any paragraphs. Translate each one individually.
+  const prompt = `Translate to ${targetLanguage}. Return JSON only.
 
 Title: ${entry.title}
 
 ${pairedFormat}
 
-Return format (JSON only, no markdown):
-{
-  "title": "translated title",
-  "summary": "one sentence summary in ${targetLanguage}",
-  "pairs": [
-    {"id": 1, "original": "original text 1", "translated": "translation 1"},
-    {"id": 2, "original": "original text 2", "translated": "translation 2"}
-  ]
-}`;
+Rules:
+- Translate ALL ${paragraphs.length} paragraphs, one per [P#]
+- Keep same order, don't merge or skip
+
+JSON format:
+{"title":"译文标题","paragraphs":["译文1","译文2",...]}`;
 
   const result = await generateText({
     model,
@@ -212,28 +206,16 @@ Return format (JSON only, no markdown):
   try {
     const parsed = JSON.parse(extractJson(result.text));
     
-    // Use AI's paired output directly if available
-    let translatedParagraphs: TranslationParagraph[];
-    
-    if (parsed.pairs && Array.isArray(parsed.pairs)) {
-      // New format: AI returns paired original+translated
-      translatedParagraphs = parsed.pairs.map((pair: any, i: number) => ({
-        original: pair.original || paragraphs[i] || '',
-        translated: pair.translated || '',
-      }));
-    } else if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
-      // Fallback: old format with just translations array
-      translatedParagraphs = paragraphs.map((original, i) => ({
-        original,
-        translated: parsed.paragraphs?.[i] || '',
-      }));
-    } else {
-      throw new Error('Invalid response format');
-    }
+    // Match translations to original paragraphs by index
+    const translations = parsed.paragraphs || [];
+    const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
+      original,
+      translated: translations[i] || '',
+    }));
 
     return {
       title: entry.title,
-      translatedTitle: parsed.title,
+      translatedTitle: parsed.title || entry.title,
       content: translatedParagraphs.map(p => p.translated).join('\n\n'),
       paragraphs: translatedParagraphs,
       summary: parsed.summary,
