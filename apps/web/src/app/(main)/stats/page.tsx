@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, BookOpen, Clock, Flame, Trophy, TrendingUp, Calendar, Zap } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { cn } from '@feedglow/ui';
-import * as api from '@/lib/api';
 
 interface StatsSummary {
   totalRead: number;
@@ -42,36 +40,8 @@ interface Achievement {
 export default function StatsPage() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
 
-  const { data: summary } = useQuery({
-    queryKey: ['stats', 'summary'],
-    queryFn: () => api.getStatsSummary(),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: topics } = useQuery({
-    queryKey: ['stats', 'topics', timeRange],
-    queryFn: () => api.getTopicStats(timeRange),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: trends } = useQuery({
-    queryKey: ['stats', 'trends', timeRange],
-    queryFn: () => api.getTrendStats(timeRange),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: achievements } = useQuery({
-    queryKey: ['stats', 'achievements'],
-    queryFn: () => api.getAchievements(),
-    retry: false,
-    throwOnError: false,
-  });
-
-  // Default data for development/demo
-  const defaultStats: StatsSummary = {
+  // Use static demo data for now (API endpoints not implemented yet)
+  const stats: StatsSummary = {
     totalRead: 247,
     totalTime: 1840,
     currentStreak: 7,
@@ -80,9 +50,8 @@ export default function StatsPage() {
     articlesLastWeek: 28,
     averagePerDay: 4.5,
   };
-  const stats: StatsSummary = summary?.totalRead !== undefined ? summary : defaultStats;
 
-  const topicData: TopicStats[] = topics?.topics || [
+  const topicData: TopicStats[] = [
     { topic: 'Technology', count: 89, percentage: 36 },
     { topic: 'Science', count: 52, percentage: 21 },
     { topic: 'Business', count: 41, percentage: 17 },
@@ -90,7 +59,7 @@ export default function StatsPage() {
     { topic: 'Other', count: 32, percentage: 13 },
   ];
 
-  const dailyData: DailyStats[] = trends?.daily || [
+  const dailyData: DailyStats[] = [
     { date: 'Mon', count: 5 },
     { date: 'Tue', count: 3 },
     { date: 'Wed', count: 7 },
@@ -109,7 +78,7 @@ export default function StatsPage() {
     { id: '6', name: 'Polymath', description: 'Read from 10 different topics', icon: '🧠', unlocked: false, progress: 5, target: 10 },
   ];
 
-  const achievementData = achievements?.achievements || defaultAchievements;
+  const achievementData = defaultAchievements;
 
   const weekChange = stats.articlesLastWeek > 0 
     ? Math.round(((stats.articlesThisWeek - stats.articlesLastWeek) / stats.articlesLastWeek) * 100)

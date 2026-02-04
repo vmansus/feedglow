@@ -3,9 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Network, Search, ZoomIn, ZoomOut, Maximize2, X, ExternalLink, Sparkles } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { cn } from '@feedglow/ui';
-import * as api from '@/lib/api';
 
 interface GraphNode {
   id: string;
@@ -40,20 +38,8 @@ export default function KnowledgePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  const { data: graphData, isLoading } = useQuery({
-    queryKey: ['knowledge', 'graph', searchQuery],
-    queryFn: () => api.getKnowledgeGraph(searchQuery || undefined),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: relatedEntries } = useQuery({
-    queryKey: ['knowledge', 'related', selectedNode?.id],
-    queryFn: () => selectedNode ? api.getRelatedEntries(selectedNode.id) : null,
-    enabled: !!selectedNode && selectedNode.type === 'article',
-    retry: false,
-    throwOnError: false,
-  });
+  // Use static demo data for now (API endpoints not implemented yet)
+  const isLoading = false;
 
   // Demo data for development
   const demoData: GraphData = {
@@ -85,7 +71,7 @@ export default function KnowledgePage() {
     ],
   };
 
-  const data = (graphData?.nodes?.length ? graphData : null) || demoData;
+  const data = demoData;
 
   // Simple force-directed layout simulation
   const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -406,22 +392,7 @@ export default function KnowledgePage() {
                     Open article
                   </a>
 
-                  {relatedEntries && (
-                    <div>
-                      <h4 className="text-xs text-muted uppercase tracking-wider mb-2">Related</h4>
-                      <div className="space-y-2">
-                        {relatedEntries.entries?.slice(0, 3).map((entry: any) => (
-                          <a
-                            key={entry.id}
-                            href={`/entry/${entry.id}`}
-                            className="block text-sm text-secondary hover:text-[rgb(var(--text-primary))] truncate"
-                          >
-                            {entry.title}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+{/* Related entries would go here */}
                 </>
               )}
 
