@@ -28,6 +28,8 @@ RUN pnpm --filter @feedglow/ui build
 
 # Build Next.js app
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL=https://api.vmansus.top
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN pnpm --filter @feedglow/web build
 
 # Production stage

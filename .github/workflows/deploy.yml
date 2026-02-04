@@ -31,7 +31,7 @@ jobs:
             pnpm --filter @feedglow/shared build
             pnpm --filter @feedglow/ui build  
             pnpm --filter @feedglow/api build
-            pnpm --filter @feedglow/web build
+            NEXT_PUBLIC_API_URL=https://api.vmansus.top pnpm --filter @feedglow/web build
             
             # Restart with PM2
             pm2 restart feedglow-api 2>/dev/null || \
