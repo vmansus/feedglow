@@ -7,7 +7,12 @@ interface BilingualContentProps {
   content: string;
   entryId: number;
   enabled: boolean;
-  language?: string;
+}
+
+// Get language from localStorage or default to zh-CN
+function getTranslateLanguage(): string {
+  if (typeof window === 'undefined') return 'zh-CN';
+  return localStorage.getItem('translateLanguage') || 'zh-CN';
 }
 
 // Cache key for localStorage
@@ -34,7 +39,8 @@ function saveCache(entryId: number, lang: string, cache: Record<string, string>)
   }
 }
 
-export function BilingualContent({ content, entryId, enabled, language = 'zh-CN' }: BilingualContentProps) {
+export function BilingualContent({ content, entryId, enabled }: BilingualContentProps) {
+  const language = getTranslateLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const translationCache = useRef<Record<string, string>>({});
@@ -54,11 +60,15 @@ export function BilingualContent({ content, entryId, enabled, language = 'zh-CN'
     if (!enabled) return;
 
     // Find all block elements that should be translated
-    const blocks = containerRef.current.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th');
+    // Skip li if inside ol/ul that we're already translating
+    const blocks = containerRef.current.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote');
+    const processedTexts = new Set<string>();
     
     blocks.forEach((block) => {
       const text = block.textContent?.trim();
-      if (!text || text.length < 15) return; // Skip short text (dates, labels)
+      if (!text || text.length < 20) return; // Skip short text (dates, labels)
+      if (processedTexts.has(text)) return; // Skip duplicates
+      processedTexts.add(text);
       
       // Create translation container
       const transDiv = document.createElement('div');

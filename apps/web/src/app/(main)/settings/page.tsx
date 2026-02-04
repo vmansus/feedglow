@@ -10,16 +10,19 @@ export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState('25');
   const [autoMarkRead, setAutoMarkRead] = useState(true);
+  const [translateLanguage, setTranslateLanguage] = useState('zh-CN');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const savedApiUrl = localStorage.getItem('apiUrl') || '';
     const savedEntriesPerPage = localStorage.getItem('entriesPerPage') || '25';
     const savedAutoMarkRead = localStorage.getItem('autoMarkRead') !== 'false';
+    const savedTranslateLanguage = localStorage.getItem('translateLanguage') || 'zh-CN';
     
     setApiUrl(savedApiUrl);
     setEntriesPerPage(savedEntriesPerPage);
     setAutoMarkRead(savedAutoMarkRead);
+    setTranslateLanguage(savedTranslateLanguage);
   }, []);
 
   const saveSettings = async () => {
@@ -28,6 +31,7 @@ export default function SettingsPage() {
       localStorage.setItem('apiUrl', apiUrl);
       localStorage.setItem('entriesPerPage', entriesPerPage);
       localStorage.setItem('autoMarkRead', String(autoMarkRead));
+      localStorage.setItem('translateLanguage', translateLanguage);
       toast.success('Settings saved!');
     } catch {
       toast.error('Failed to save settings');
@@ -90,6 +94,39 @@ export default function SettingsPage() {
                     }`}
                   />
                 </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Translation */}
+          <section className="surface-elevated rounded-xl border border-default p-6">
+            <h2 className="text-lg font-semibold mb-4 text-[rgb(var(--text-primary))]">Translation</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-2">
+                  Default translation language
+                </label>
+                <select
+                  value={translateLanguage}
+                  onChange={(e) => setTranslateLanguage(e.target.value)}
+                  className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="zh-CN">简体中文</option>
+                  <option value="zh-TW">繁體中文</option>
+                  <option value="en">English</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="es">Español</option>
+                  <option value="fr">Français</option>
+                  <option value="de">Deutsch</option>
+                  <option value="ru">Русский</option>
+                  <option value="pt">Português</option>
+                  <option value="ar">العربية</option>
+                </select>
+                <p className="mt-1 text-sm text-muted">
+                  Articles will be translated to this language
+                </p>
               </div>
             </div>
           </section>

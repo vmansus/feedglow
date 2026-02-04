@@ -243,7 +243,6 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
               content={entry.content}
               entryId={entry.id}
               enabled={translateEnabled}
-              language="zh-CN"
             />
           </div>
 
