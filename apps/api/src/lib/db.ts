@@ -149,5 +149,62 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_fg_kedges_user ON fg_knowledge_edges(user_id)
   `);
 
+  // ============ P0: Tags ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_tags (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      color VARCHAR(7) DEFAULT '#6366f1',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, name)
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_tags_user ON fg_tags(user_id)
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_entry_tags (
+      user_id INTEGER NOT NULL,
+      entry_id INTEGER NOT NULL,
+      tag_id INTEGER NOT NULL REFERENCES fg_tags(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (user_id, entry_id, tag_id)
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_entry_tags_user ON fg_entry_tags(user_id)
+  `);
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_entry_tags_tag ON fg_entry_tags(tag_id)
+  `);
+
+  // ============ P0: Shares ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_shares (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      entry_id INTEGER NOT NULL,
+      share_code VARCHAR(32) NOT NULL UNIQUE,
+      title TEXT,
+      content TEXT,
+      url TEXT,
+      author TEXT,
+      feed_title TEXT,
+      published_at TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, entry_id)
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_shares_code ON fg_shares(share_code)
+  `);
+
   console.log('[DB] Migrations complete');
 }

@@ -289,6 +289,59 @@ export class MinifluxClient {
     await this.request('DELETE', `/categories/${id}`);
   }
 
+  async getCategoryEntries(
+    categoryId: number,
+    filter?: EntriesFilter
+  ): Promise<EntriesResponse> {
+    const params = new URLSearchParams();
+    if (filter) {
+      Object.entries(filter).forEach(([key, value]) => {
+        if (value !== undefined) {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const query = params.toString();
+    return this.request(
+      'GET',
+      `/categories/${categoryId}/entries${query ? `?${query}` : ''}`
+    );
+  }
+
+  // ============ Counters ============
+
+  async getCounters(): Promise<{ reads: Record<string, number>; unreads: Record<string, number> }> {
+    return this.request('GET', '/feeds/counters');
+  }
+
+  // ============ Batch Mark Read ============
+
+  async markFeedEntriesAsRead(feedId: number): Promise<void> {
+    await this.request('PUT', `/feeds/${feedId}/mark-all-as-read`);
+  }
+
+  async markCategoryEntriesAsRead(categoryId: number): Promise<void> {
+    await this.request('PUT', `/categories/${categoryId}/mark-all-as-read`);
+  }
+
+  async markAllEntriesAsRead(): Promise<void> {
+    await this.request('PUT', '/mark-all-as-read');
+  }
+
+  // ============ Fetch Content ============
+
+  async fetchOriginalContent(entryId: number): Promise<{ content: string }> {
+    return this.request('GET', `/entries/${entryId}/fetch-content`);
+  }
+
+  // ============ Share ============
+
+  async shareEntry(entryId: number): Promise<string> {
+    // Miniflux returns share_code in entry, toggling share
+    const entry = await this.getEntry(entryId);
+    return entry.share_code;
+  }
+
   // ============ User ============
 
   async getMe(): Promise<{ id: number; username: string; is_admin: boolean }> {

@@ -20,6 +20,35 @@ function getClient(c: any) {
   return createMinifluxClient({ baseUrl: minifluxUrl, apiKey: minifluxApiKey });
 }
 
+// ============ Counters (must be before /:id routes) ============
+
+// Get unread/read counters per feed
+feeds.get('/counters', async (c) => {
+  const client = getClient(c);
+  const counters = await client.getCounters();
+  return c.json(counters);
+});
+
+// Get feeds with health issues
+feeds.get('/health', async (c) => {
+  const client = getClient(c);
+  const feedList = await client.getFeeds();
+  const unhealthy = feedList.filter(f => f.parsing_error_count > 0 || f.disabled);
+  return c.json({
+    total: unhealthy.length,
+    feeds: unhealthy.map(f => ({
+      id: f.id,
+      title: f.title,
+      site_url: f.site_url,
+      feed_url: f.feed_url,
+      parsing_error_count: f.parsing_error_count,
+      parsing_error_message: f.parsing_error_message,
+      checked_at: f.checked_at,
+      disabled: f.disabled,
+    })),
+  });
+});
+
 // List all feeds
 feeds.get('/', async (c) => {
   const client = getClient(c);
@@ -133,6 +162,14 @@ feeds.get('/:id/icon', async (c) => {
     mimeType: icon.mime_type,
     dataUrl: `data:${icon.mime_type};base64,${icon.data}`,
   });
+});
+
+// Mark all feed entries as read
+feeds.post('/:id/mark-read', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getClient(c);
+  await client.markFeedEntriesAsRead(id);
+  return c.json({ success: true });
 });
 
 // Get feed entries
