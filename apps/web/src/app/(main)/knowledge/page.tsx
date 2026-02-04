@@ -29,6 +29,36 @@ interface GraphData {
   links: GraphLink[];
 }
 
+// Static demo data (defined outside component to prevent re-renders)
+const DEMO_DATA: GraphData = {
+  nodes: [
+    { id: '1', label: 'AI & Machine Learning', type: 'topic', size: 30 },
+    { id: '2', label: 'Web Development', type: 'topic', size: 25 },
+    { id: '3', label: 'GPT-4 Deep Dive', type: 'article', size: 15 },
+    { id: '4', label: 'React Server Components', type: 'article', size: 15 },
+    { id: '5', label: 'Next.js 14 Features', type: 'article', size: 15 },
+    { id: '6', label: 'LLM Fine-tuning Guide', type: 'article', size: 15 },
+    { id: '7', label: 'OpenAI Blog', type: 'feed', size: 20 },
+    { id: '8', label: 'Vercel Blog', type: 'feed', size: 20 },
+    { id: '9', label: 'Cloud Computing', type: 'topic', size: 22 },
+    { id: '10', label: 'AWS Lambda Guide', type: 'article', size: 15 },
+  ],
+  links: [
+    { source: '1', target: '3', type: 'same_topic' },
+    { source: '1', target: '6', type: 'same_topic' },
+    { source: '2', target: '4', type: 'same_topic' },
+    { source: '2', target: '5', type: 'same_topic' },
+    { source: '7', target: '3', type: 'references' },
+    { source: '7', target: '6', type: 'references' },
+    { source: '8', target: '4', type: 'references' },
+    { source: '8', target: '5', type: 'references' },
+    { source: '4', target: '5', type: 'similar' },
+    { source: '3', target: '6', type: 'similar' },
+    { source: '9', target: '10', type: 'same_topic' },
+    { source: '9', target: '1', type: 'similar' },
+  ],
+};
+
 export default function KnowledgePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,38 +70,7 @@ export default function KnowledgePage() {
 
   // Use static demo data for now (API endpoints not implemented yet)
   const isLoading = false;
-
-  // Demo data for development
-  const demoData: GraphData = {
-    nodes: [
-      { id: '1', label: 'AI & Machine Learning', type: 'topic', size: 30 },
-      { id: '2', label: 'Web Development', type: 'topic', size: 25 },
-      { id: '3', label: 'GPT-4 Deep Dive', type: 'article', size: 15 },
-      { id: '4', label: 'React Server Components', type: 'article', size: 15 },
-      { id: '5', label: 'Next.js 14 Features', type: 'article', size: 15 },
-      { id: '6', label: 'LLM Fine-tuning Guide', type: 'article', size: 15 },
-      { id: '7', label: 'OpenAI Blog', type: 'feed', size: 20 },
-      { id: '8', label: 'Vercel Blog', type: 'feed', size: 20 },
-      { id: '9', label: 'Cloud Computing', type: 'topic', size: 22 },
-      { id: '10', label: 'AWS Lambda Guide', type: 'article', size: 15 },
-    ],
-    links: [
-      { source: '1', target: '3', type: 'same_topic' },
-      { source: '1', target: '6', type: 'same_topic' },
-      { source: '2', target: '4', type: 'same_topic' },
-      { source: '2', target: '5', type: 'same_topic' },
-      { source: '7', target: '3', type: 'references' },
-      { source: '7', target: '6', type: 'references' },
-      { source: '8', target: '4', type: 'references' },
-      { source: '8', target: '5', type: 'references' },
-      { source: '4', target: '5', type: 'similar' },
-      { source: '3', target: '6', type: 'similar' },
-      { source: '9', target: '10', type: 'same_topic' },
-      { source: '9', target: '1', type: 'similar' },
-    ],
-  };
-
-  const data = demoData;
+  const data = DEMO_DATA;
 
   // Simple force-directed layout simulation
   const [nodes, setNodes] = useState<GraphNode[]>([]);
