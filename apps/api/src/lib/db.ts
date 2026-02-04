@@ -278,5 +278,22 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_fg_ai_filters_user ON fg_ai_filters(user_id)
   `);
 
+  // ============ P2: Fever API Auth ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_fever_auth (
+      user_id INTEGER PRIMARY KEY,
+      username VARCHAR(100) NOT NULL,
+      api_key_hash VARCHAR(32) NOT NULL,
+      miniflux_url TEXT NOT NULL,
+      miniflux_api_key TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_fever_hash ON fg_fever_auth(api_key_hash)
+  `);
+
   console.log('[DB] Migrations complete');
 }

@@ -30,6 +30,7 @@ import notifications from './routes/notifications.js';
 import exports_ from './routes/exports.js';
 import integrations from './routes/integrations.js';
 import aiFilters from './routes/ai-filters.js';
+import { fever, feverSetup } from './routes/fever.js';
 
 const app = new Hono();
 
@@ -120,6 +121,8 @@ app.route('/api/notifications', notifications);
 app.route('/api/export', exports_);
 app.route('/api/integrations', integrations);
 app.route('/api/ai/filters', aiFilters);
+app.route('/fever', fever);           // Fever API: POST /fever/?api
+app.route('/api/fever', feverSetup);  // Fever setup: POST /api/fever/setup
 app.route('/api/webhook', webhook);
 
 // Error handler
