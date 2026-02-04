@@ -37,7 +37,7 @@ export class AIRateLimitError extends Error {
 }
 
 // Default timeout for AI requests (30 seconds)
-const AI_TIMEOUT_MS = 30000;
+const AI_TIMEOUT_MS = 60000;
 
 export interface AIConfig {
   provider: 'openai' | 'anthropic' | 'ollama';
@@ -163,22 +163,16 @@ export async function translateArticle(
 
   const model = getModel(config);
 
-  const content = stripHtml(entry.content).slice(0, 10000);
+  const content = stripHtml(entry.content).slice(0, 5000);
 
-  const prompt = `Translate the following article to ${targetLanguage}. 
-Keep the formatting and structure intact.
+  const prompt = `Translate to ${targetLanguage}. Return JSON only, no markdown.
 
 Title: ${entry.title}
 
 Content:
 ${content}
 
-Respond in JSON format:
-{
-  "title": "translated title",
-  "content": "translated content",
-  "summary": "brief summary in ${targetLanguage}"
-}`;
+{"title":"translated title","content":"translated content","summary":"one sentence summary in ${targetLanguage}"}`;
 
   const result = await generateText({
     model,
