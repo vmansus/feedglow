@@ -10,10 +10,13 @@ import {
   ExternalLink, 
   Languages, 
   Sparkles,
-  MessageCircle
+  MessageCircle,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useToggleBookmark, useSummarize } from '@/hooks';
+import { useLayout } from '@/contexts/layout-context';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
 import { BilingualContent } from './bilingual-content';
@@ -33,6 +36,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
   const readerSettings = useReaderSettings();
+  const { fullscreen, toggleFullscreen } = useLayout();
 
   useEffect(() => {
     setIsStarred(entry.starred);
@@ -109,6 +113,18 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
+          <button
+            onClick={toggleFullscreen}
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              fullscreen
+                ? "text-orange-500 bg-orange-500/10"
+                : "text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
+            )}
+            title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
+          >
+            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <ReaderSettingsButton {...readerSettings} />
         </div>
       </div>

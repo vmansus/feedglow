@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState, useRef, useCallback } from 'react';
 import { cn } from '@feedglow/ui';
+import { useLayout } from '@/contexts/layout-context';
 
 interface ResizableLayoutProps {
   sidebar?: ReactNode;
@@ -24,6 +25,7 @@ export function ResizableLayout({
   const [listWidth, setListWidth] = useState(defaultListSize);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { fullscreen } = useLayout();
 
   useEffect(() => {
     const saved = localStorage.getItem('feedglow-list-width');
@@ -71,29 +73,33 @@ export function ResizableLayout({
 
   return (
     <div ref={containerRef} className="flex h-full">
-      {/* List Panel */}
-      <div
-        style={{ width: listWidth }}
-        className="flex flex-col surface-base border-r border-default flex-shrink-0"
-      >
-        {listHeader && (
-          <div className="sticky top-0 surface-base z-10 border-b border-default">
-            {listHeader}
+      {/* List Panel - hidden in fullscreen */}
+      {!fullscreen && (
+        <>
+          <div
+            style={{ width: listWidth }}
+            className="flex flex-col surface-base border-r border-default flex-shrink-0"
+          >
+            {listHeader && (
+              <div className="sticky top-0 surface-base z-10 border-b border-default">
+                {listHeader}
+              </div>
+            )}
+            <div className="flex-1 overflow-y-auto">{list}</div>
           </div>
-        )}
-        <div className="flex-1 overflow-y-auto">{list}</div>
-      </div>
 
-      {/* Resize Handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          "w-1 cursor-col-resize transition-colors flex-shrink-0",
-          isResizing 
-            ? "bg-orange-500" 
-            : "bg-[rgb(var(--border-default))] hover:bg-orange-400"
-        )}
-      />
+          {/* Resize Handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              "w-1 cursor-col-resize transition-colors flex-shrink-0",
+              isResizing 
+                ? "bg-orange-500" 
+                : "bg-[rgb(var(--border-default))] hover:bg-orange-400"
+            )}
+          />
+        </>
+      )}
 
       {/* Reader Panel */}
       <div className="flex-1 surface-elevated overflow-hidden">{reader}</div>

@@ -18,8 +18,11 @@ import {
   Sparkles,
   Compass,
   BarChart3,
-  Network
+  Network,
+  PanelLeftClose,
+  PanelLeft
 } from 'lucide-react';
+import { useLayout } from '@/contexts/layout-context';
 
 // Generate consistent color from string
 function stringToColor(str: string): string {
@@ -46,8 +49,14 @@ export function Sidebar() {
   const { categories } = useCategories();
   const { user, logout } = useAuth();
   const { open: openCommandPalette } = useCommandPalette();
+  const { sidebarCollapsed, toggleSidebar, fullscreen } = useLayout();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
+
+  // Hide sidebar completely in fullscreen mode
+  if (fullscreen) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen">
@@ -116,9 +125,23 @@ export function Sidebar() {
           icon={<Settings className="w-5 h-5" />}
           active={pathname === '/settings'}
         />
+
+        {/* Collapse Toggle */}
+        <button
+          onClick={toggleSidebar}
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-colors mb-2"
+          title={sidebarCollapsed ? 'Expand sidebar [' : 'Collapse sidebar ['}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeft className="w-5 h-5" />
+          ) : (
+            <PanelLeftClose className="w-5 h-5" />
+          )}
+        </button>
       </aside>
 
-      {/* Feed List Panel */}
+      {/* Feed List Panel - collapsible */}
+      {!sidebarCollapsed && (
       <aside className="w-56 border-r border-default surface-base flex flex-col">
         {/* Search */}
         <div className="p-2">
@@ -201,6 +224,7 @@ export function Sidebar() {
           </div>
         )}
       </aside>
+      )}
     </div>
   );
 }
