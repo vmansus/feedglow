@@ -115,7 +115,7 @@ export function AISettings() {
     );
   }
 
-  const currentProvider = settings?.availableProviders.find(p => p.id === provider);
+  const currentProvider = settings?.availableProviders?.find(p => p.id === provider);
   const needsApiKey = currentProvider?.needsApiKey ?? true;
   const needsBaseUrl = currentProvider?.needsBaseUrl ?? false;
 
