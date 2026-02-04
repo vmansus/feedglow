@@ -142,7 +142,7 @@ export function AISettings() {
             }}
             className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
-            {settings?.availableProviders.map((p) => (
+            {settings?.availableProviders?.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
