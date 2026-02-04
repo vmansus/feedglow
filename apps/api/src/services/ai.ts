@@ -155,80 +155,142 @@ Respond in JSON format:
   }
 }
 
+// Batch size for chunked translation
+const TRANSLATION_BATCH_SIZE = 5;
+
 /**
- * Translate an article to target language
+ * Translate a batch of paragraphs
+ */
+async function translateBatch(
+  paragraphs: string[],
+  targetLanguage: string,
+  model: any
+): Promise<string[]> {
+  const numbered = paragraphs.map((p, i) => `[${i + 1}] ${p}`).join('\n');
+  
+  const prompt = `Translate to ${targetLanguage}. Return JSON array only, no markdown.
+
+${numbered}
+
+Return exactly ${paragraphs.length} translations as JSON array:
+["译文1","译文2",...]`;
+
+  const result = await generateText({
+    model,
+    prompt,
+    maxTokens: 2000,
+    abortSignal: AbortSignal.timeout(30000), // 30s per batch
+  });
+
+  try {
+    return JSON.parse(extractJson(result.text));
+  } catch {
+    // Fallback: return original if parsing fails
+    return paragraphs;
+  }
+}
+
+/**
+ * Translate an article to target language (chunked for speed)
  */
 export async function translateArticle(
   entry: Entry,
   targetLanguage: string,
   config: AIConfig
 ): Promise<TranslationResult> {
-  // Rate limiting check
   if (!rateLimiter.tryConsume()) {
     throw new AIRateLimitError();
   }
 
   const model = getModel(config);
+  const content = stripHtml(entry.content).slice(0, 8000);
 
-  const content = stripHtml(entry.content).slice(0, 5000);
-
-  // Split into paragraphs - keep shorter ones too for better accuracy
+  // Split into paragraphs
   const paragraphs = content
     .split(/\n\s*\n|\n/)
     .map(p => p.trim())
     .filter(p => p.length > 5);
 
-  // Create paired format for AI to maintain alignment
-  const pairedFormat = paragraphs
-    .map((p, i) => `[P${i + 1}] ${p}`)
-    .join('\n');
-
-  const prompt = `Translate to ${targetLanguage}. Return JSON only.
-
-Title: ${entry.title}
-
-${pairedFormat}
-
-Rules:
-- Translate ALL ${paragraphs.length} paragraphs, one per [P#]
-- Keep same order, don't merge or skip
-
-JSON format:
-{"title":"译文标题","paragraphs":["译文1","译文2",...]}`;
-
-  const result = await generateText({
+  // Translate title first
+  const titleResult = await generateText({
     model,
-    prompt,
-    maxTokens: 6000,
-    abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    prompt: `Translate to ${targetLanguage}, return only the translation:\n${entry.title}`,
+    maxTokens: 200,
+    abortSignal: AbortSignal.timeout(15000),
   });
+  const translatedTitle = titleResult.text.trim();
 
-  try {
-    const parsed = JSON.parse(extractJson(result.text));
+  // Translate paragraphs in batches (parallel)
+  const batches: string[][] = [];
+  for (let i = 0; i < paragraphs.length; i += TRANSLATION_BATCH_SIZE) {
+    batches.push(paragraphs.slice(i, i + TRANSLATION_BATCH_SIZE));
+  }
+
+  // Run all batches in parallel for speed
+  const batchResults = await Promise.all(
+    batches.map(batch => translateBatch(batch, targetLanguage, model))
+  );
+
+  // Flatten results
+  const translations = batchResults.flat();
+
+  const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
+    original,
+    translated: translations[i] || '',
+  }));
+
+  return {
+    title: entry.title,
+    translatedTitle,
+    content: translatedParagraphs.map(p => p.translated).join('\n\n'),
+    paragraphs: translatedParagraphs,
+    tokens: 0,
+  };
+}
+
+/**
+ * Stream translation - yields chunks as they complete
+ */
+export async function* translateArticleStream(
+  entry: Entry,
+  targetLanguage: string,
+  config: AIConfig
+): AsyncGenerator<{ type: 'title' | 'batch'; data: any }> {
+  if (!rateLimiter.tryConsume()) {
+    throw new AIRateLimitError();
+  }
+
+  const model = getModel(config);
+  const content = stripHtml(entry.content).slice(0, 8000);
+
+  const paragraphs = content
+    .split(/\n\s*\n|\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 5);
+
+  // Yield title first
+  const titleResult = await generateText({
+    model,
+    prompt: `Translate to ${targetLanguage}, return only the translation:\n${entry.title}`,
+    maxTokens: 200,
+    abortSignal: AbortSignal.timeout(15000),
+  });
+  yield { type: 'title', data: { title: entry.title, translatedTitle: titleResult.text.trim() } };
+
+  // Yield each batch as it completes
+  for (let i = 0; i < paragraphs.length; i += TRANSLATION_BATCH_SIZE) {
+    const batch = paragraphs.slice(i, i + TRANSLATION_BATCH_SIZE);
+    const translations = await translateBatch(batch, targetLanguage, model);
     
-    // Match translations to original paragraphs by index
-    const translations = parsed.paragraphs || [];
-    const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
-      original,
-      translated: translations[i] || '',
-    }));
-
-    return {
-      title: entry.title,
-      translatedTitle: parsed.title || entry.title,
-      content: translatedParagraphs.map(p => p.translated).join('\n\n'),
-      paragraphs: translatedParagraphs,
-      summary: parsed.summary,
-      tokens: result.usage?.totalTokens || 0,
-    };
-  } catch {
-    // Fallback: return as single paragraph
-    return {
-      title: entry.title,
-      translatedTitle: entry.title,
-      content: result.text,
-      paragraphs: [{ original: content, translated: result.text }],
-      tokens: result.usage?.totalTokens || 0,
+    yield {
+      type: 'batch',
+      data: {
+        startIndex: i,
+        paragraphs: batch.map((original, j) => ({
+          original,
+          translated: translations[j] || '',
+        })),
+      },
     };
   }
 }
