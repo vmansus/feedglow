@@ -60,15 +60,20 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
     if (!enabled) return;
 
     // Find all block elements that should be translated
-    // Skip li if inside ol/ul that we're already translating
-    const blocks = containerRef.current.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote');
+    const blocks = containerRef.current.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, td');
     const processedTexts = new Set<string>();
     
     blocks.forEach((block) => {
+      // Skip if already has translation
+      if (block.nextElementSibling?.classList.contains('feedglow-translation')) return;
+      
       const text = block.textContent?.trim();
-      if (!text || text.length < 20) return; // Skip short text (dates, labels)
-      if (processedTexts.has(text)) return; // Skip duplicates
-      processedTexts.add(text);
+      if (!text || text.length < 15) return; // Skip short text
+      
+      // Normalize text for dedup (remove extra whitespace)
+      const normalizedText = text.replace(/\s+/g, ' ');
+      if (processedTexts.has(normalizedText)) return; // Skip duplicates
+      processedTexts.add(normalizedText);
       
       // Create translation container
       const transDiv = document.createElement('div');
