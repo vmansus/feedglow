@@ -155,143 +155,49 @@ Respond in JSON format:
   }
 }
 
-// Batch size for chunked translation
-const TRANSLATION_BATCH_SIZE = 5;
-
 /**
- * Translate a batch of paragraphs
+ * Translate paragraphs - simple batch API
+ * Used by frontend for on-demand translation
  */
-async function translateBatch(
+export async function translateParagraphs(
   paragraphs: string[],
   targetLanguage: string,
-  model: any
+  config: AIConfig
 ): Promise<string[]> {
-  const numbered = paragraphs.map((p, i) => `[${i + 1}] ${p}`).join('\n');
+  if (!rateLimiter.tryConsume()) {
+    throw new AIRateLimitError();
+  }
+
+  const model = getModel(config);
   
-  const prompt = `Translate to ${targetLanguage}. Return JSON array only, no markdown.
+  // Number each paragraph for structured output
+  const numbered = paragraphs.map((p, i) => `[${i + 1}] ${p}`).join('\n\n');
+  
+  const prompt = `Translate each numbered paragraph to ${targetLanguage}. 
+Return ONLY a JSON array with exactly ${paragraphs.length} translations, one per paragraph.
+Keep the same order. No explanations.
 
 ${numbered}
 
-Return exactly ${paragraphs.length} translations as JSON array:
-["译文1","译文2",...]`;
+Response format: ["translation 1", "translation 2", ...]`;
 
   const result = await generateText({
     model,
     prompt,
-    maxTokens: 2000,
-    abortSignal: AbortSignal.timeout(30000), // 30s per batch
+    maxTokens: 3000,
+    abortSignal: AbortSignal.timeout(45000), // 45s timeout
   });
 
   try {
-    return JSON.parse(extractJson(result.text));
+    const translations = JSON.parse(extractJson(result.text));
+    if (Array.isArray(translations) && translations.length === paragraphs.length) {
+      return translations;
+    }
+    // If array length doesn't match, pad or truncate
+    return paragraphs.map((_, i) => translations[i] || '');
   } catch {
-    // Fallback: return original if parsing fails
-    return paragraphs;
-  }
-}
-
-/**
- * Translate an article to target language (chunked for speed)
- */
-export async function translateArticle(
-  entry: Entry,
-  targetLanguage: string,
-  config: AIConfig
-): Promise<TranslationResult> {
-  if (!rateLimiter.tryConsume()) {
-    throw new AIRateLimitError();
-  }
-
-  const model = getModel(config);
-  const content = stripHtml(entry.content).slice(0, 8000);
-
-  // Split into paragraphs
-  const paragraphs = content
-    .split(/\n\s*\n|\n/)
-    .map(p => p.trim())
-    .filter(p => p.length > 5);
-
-  // Translate title first
-  const titleResult = await generateText({
-    model,
-    prompt: `Translate to ${targetLanguage}, return only the translation:\n${entry.title}`,
-    maxTokens: 200,
-    abortSignal: AbortSignal.timeout(15000),
-  });
-  const translatedTitle = titleResult.text.trim();
-
-  // Translate paragraphs in batches (parallel)
-  const batches: string[][] = [];
-  for (let i = 0; i < paragraphs.length; i += TRANSLATION_BATCH_SIZE) {
-    batches.push(paragraphs.slice(i, i + TRANSLATION_BATCH_SIZE));
-  }
-
-  // Run all batches in parallel for speed
-  const batchResults = await Promise.all(
-    batches.map(batch => translateBatch(batch, targetLanguage, model))
-  );
-
-  // Flatten results
-  const translations = batchResults.flat();
-
-  const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
-    original,
-    translated: translations[i] || '',
-  }));
-
-  return {
-    title: entry.title,
-    translatedTitle,
-    content: translatedParagraphs.map(p => p.translated).join('\n\n'),
-    paragraphs: translatedParagraphs,
-    tokens: 0,
-  };
-}
-
-/**
- * Stream translation - yields chunks as they complete
- */
-export async function* translateArticleStream(
-  entry: Entry,
-  targetLanguage: string,
-  config: AIConfig
-): AsyncGenerator<{ type: 'title' | 'batch'; data: any }> {
-  if (!rateLimiter.tryConsume()) {
-    throw new AIRateLimitError();
-  }
-
-  const model = getModel(config);
-  const content = stripHtml(entry.content).slice(0, 8000);
-
-  const paragraphs = content
-    .split(/\n\s*\n|\n/)
-    .map(p => p.trim())
-    .filter(p => p.length > 5);
-
-  // Yield title first
-  const titleResult = await generateText({
-    model,
-    prompt: `Translate to ${targetLanguage}, return only the translation:\n${entry.title}`,
-    maxTokens: 200,
-    abortSignal: AbortSignal.timeout(15000),
-  });
-  yield { type: 'title', data: { title: entry.title, translatedTitle: titleResult.text.trim() } };
-
-  // Yield each batch as it completes
-  for (let i = 0; i < paragraphs.length; i += TRANSLATION_BATCH_SIZE) {
-    const batch = paragraphs.slice(i, i + TRANSLATION_BATCH_SIZE);
-    const translations = await translateBatch(batch, targetLanguage, model);
-    
-    yield {
-      type: 'batch',
-      data: {
-        startIndex: i,
-        paragraphs: batch.map((original, j) => ({
-          original,
-          translated: translations[j] || '',
-        })),
-      },
-    };
+    // Fallback: return empty translations
+    return paragraphs.map(() => '[翻译失败]');
   }
 }
 

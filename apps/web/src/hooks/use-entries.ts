@@ -4,7 +4,6 @@
 
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as api from '@/lib/api';
@@ -139,79 +138,15 @@ export function useSummarize() {
   });
 }
 
-export function useTranslate() {
-  const queryClient = useQueryClient();
-
+// Simple batch translation
+export function useTranslateParagraphs() {
   return useMutation({
-    mutationFn: ({ id, language }: { id: number; language?: string }) =>
-      api.translateEntry(id, language),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['entries', data.entryId] });
-      toast.success('Translation complete!');
-    },
+    mutationFn: ({ paragraphs, language }: { paragraphs: string[]; language?: string }) =>
+      api.translateParagraphs(paragraphs, language),
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to translate');
+      toast.error(error.message || '翻译失败');
     },
   });
-}
-
-// Streaming translation hook
-export function useTranslateStream() {
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
-  const [paragraphs, setParagraphs] = useState<Array<{ original: string; translated: string }>>([]);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<(() => void) | null>(null);
-
-  const startTranslation = useCallback((entryId: number, language: string = 'zh-CN') => {
-    // Reset state
-    setIsTranslating(true);
-    setTranslatedTitle(null);
-    setParagraphs([]);
-    setError(null);
-
-    // Abort previous if any
-    abortRef.current?.();
-
-    abortRef.current = api.translateEntryStream(entryId, language, (chunk) => {
-      if (chunk.type === 'title' && chunk.data) {
-        setTranslatedTitle(chunk.data.translatedTitle || null);
-      } else if (chunk.type === 'batch' && chunk.data?.paragraphs) {
-        setParagraphs((prev) => {
-          const newParagraphs = [...prev];
-          const startIndex = chunk.data!.startIndex || 0;
-          chunk.data!.paragraphs!.forEach((p, i) => {
-            newParagraphs[startIndex + i] = p;
-          });
-          return newParagraphs;
-        });
-      } else if (chunk.type === 'done') {
-        setIsTranslating(false);
-        toast.success('翻译完成！');
-      } else if (chunk.type === 'error') {
-        setIsTranslating(false);
-        setError(chunk.error || 'Translation failed');
-        toast.error(chunk.error || '翻译失败');
-      }
-    });
-  }, []);
-
-  const reset = useCallback(() => {
-    abortRef.current?.();
-    setIsTranslating(false);
-    setTranslatedTitle(null);
-    setParagraphs([]);
-    setError(null);
-  }, []);
-
-  return {
-    isTranslating,
-    translatedTitle,
-    paragraphs,
-    error,
-    startTranslation,
-    reset,
-  };
 }
 
 export function useGenerateTags() {

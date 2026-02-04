@@ -1,29 +1,22 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   X, 
   Star, 
   ExternalLink, 
   Languages, 
-  FileText, 
   Sparkles,
-  ChevronDown,
-  ChevronUp,
-  MessageCircle,
-  Eye,
-  EyeOff
+  MessageCircle
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize, useTranslate, useTranslateStream, useFetchFullContent } from '@/hooks';
+import { useToggleBookmark, useSummarize } from '@/hooks';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
-
-// Translation display modes
-type TranslationMode = 'off' | 'inline' | 'panel';
+import { BilingualContent } from './bilingual-content';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -31,8 +24,7 @@ interface EntryReaderProps {
 }
 
 export function EntryReader({ entry, onClose }: EntryReaderProps) {
-  const [translationMode, setTranslationMode] = useState<TranslationMode>('off');
-  const [showFullContent, setShowFullContent] = useState(false);
+  const [translateEnabled, setTranslateEnabled] = useState(false);
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
   const [showChat, setShowChat] = useState(false);
@@ -40,59 +32,13 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
-  const translate = useTranslate();
-  const translateStream = useTranslateStream();
-  const fetchFullContent = useFetchFullContent();
   const readerSettings = useReaderSettings();
 
   useEffect(() => {
     setIsStarred(entry.starred);
-    setShowFullContent(false);
-    setTranslationMode('off');
+    setTranslateEnabled(false);
     setReadProgress(0);
-    fetchFullContent.reset();
-    translate.reset();
-    translateStream.reset();
   }, [entry.id, entry.starred]);
-
-  // Get translation data - prefer streaming data if available
-  const streamParagraphs = translateStream.paragraphs;
-  const hasStreamTranslation = streamParagraphs.length > 0;
-  const translationData = hasStreamTranslation 
-    ? { paragraphs: streamParagraphs, translatedTitle: translateStream.translatedTitle }
-    : (translate.data || entry.translation);
-  const hasTranslation = !!translationData?.paragraphs?.length;
-  const isTranslating = translateStream.isTranslating || translate.isPending;
-
-  // Build inline bilingual content when translation is available
-  const bilingualContent = useMemo(() => {
-    if (!hasTranslation || translationMode !== 'inline') return null;
-    
-    const paragraphs = translationData!.paragraphs!;
-    return paragraphs.map((para, i) => (
-      <motion.div 
-        key={i} 
-        className="mb-6 group"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: i * 0.05 }}
-      >
-        {/* Original text */}
-        <p className="text-secondary mb-2 leading-relaxed">
-          {para.original}
-        </p>
-        {/* Translation */}
-        <p className="text-orange-400/90 text-sm leading-relaxed pl-3 border-l-2 border-orange-500/40">
-          {para.translated || (
-            <span className="inline-flex items-center gap-2 text-orange-400/50">
-              <span className="w-3 h-3 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
-              翻译中...
-            </span>
-          )}
-        </p>
-      </motion.div>
-    ));
-  }, [hasTranslation, translationMode, translationData]);
 
   useEffect(() => {
     const content = contentRef.current;
@@ -278,140 +224,35 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
-            {/* Translation button with mode toggle */}
-            {!hasTranslation && !isTranslating ? (
-              <button
-                onClick={() => {
-                  setTranslationMode('inline');
-                  translateStream.startTranslation(entry.id, 'zh-CN');
-                }}
-                disabled={isTranslating}
-                className="btn-subtle flex items-center gap-2"
-              >
-                <Languages className="w-4 h-4" />
-                逐段翻译
-              </button>
-            ) : isTranslating ? (
-              <button
-                disabled
-                className="btn-subtle flex items-center gap-2 bg-orange-500/10 text-orange-400"
-              >
-                <span className="w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
-                翻译中... ({streamParagraphs.length} 段)
-              </button>
-            ) : (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setTranslationMode(translationMode === 'inline' ? 'off' : 'inline')}
-                  className={cn(
-                    "btn-subtle flex items-center gap-2",
-                    translationMode === 'inline' && "bg-orange-500/20 text-orange-400 border-orange-500/40"
-                  )}
-                >
-                  {translationMode === 'inline' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {translationMode === 'inline' ? '隐藏译文' : '显示译文'}
-                </button>
-                <button
-                  onClick={() => setTranslationMode(translationMode === 'panel' ? 'off' : 'panel')}
-                  className={cn(
-                    "btn-subtle flex items-center gap-2",
-                    translationMode === 'panel' && "bg-orange-500/20 text-orange-400 border-orange-500/40"
-                  )}
-                >
-                  <Languages className="w-4 h-4" />
-                  摘要
-                </button>
-              </div>
-            )}
+            {/* Translation toggle - simple on/off */}
             <button
-              onClick={() => fetchFullContent.mutate(entry.id)}
-              disabled={fetchFullContent.isPending || !!fetchFullContent.data}
-              className="btn-subtle flex items-center gap-2"
+              onClick={() => setTranslateEnabled(!translateEnabled)}
+              className={cn(
+                "btn-subtle flex items-center gap-2",
+                translateEnabled && "bg-orange-500/20 text-orange-400 border-orange-500/40"
+              )}
             >
-              <FileText className="w-4 h-4" />
-              {fetchFullContent.isPending ? 'Fetching...' : fetchFullContent.data ? 'Fetched' : 'Full Article'}
+              <Languages className="w-4 h-4" />
+              {translateEnabled ? '关闭翻译' : '逐段翻译'}
             </button>
           </div>
 
-          {/* Translation Panel (summary mode) */}
-          <AnimatePresence>
-            {translationMode === 'panel' && hasTranslation && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default space-y-4"
-              >
-                {/* Translated Title */}
-                <div>
-                  <h4 className="font-medium text-[rgb(var(--text-primary))]">
-                    {translationData?.translatedTitle}
-                  </h4>
-                  <p className="text-sm text-muted mt-1">
-                    原文: {entry.title}
-                  </p>
-                </div>
-
-                {/* Summary */}
-                {'summary' in (translationData || {}) && (translationData as any)?.summary && (
-                  <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                    <p className="text-sm text-[rgb(var(--text-primary))]">
-                      📝 {(translationData as any).summary}
-                    </p>
-                  </div>
-                )}
-              </motion.div>
+          {/* Main Content - with optional bilingual translation */}
+          <div
+            style={getReaderStyles(readerSettings.settings)}
+            className={cn(
+              "prose prose-sm dark:prose-invert max-w-none",
+              "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
+              "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary"
             )}
-          </AnimatePresence>
-
-          {/* Full Article Content */}
-          {fetchFullContent.data && (
-            <div className="mb-6">
-              <button
-                onClick={() => setShowFullContent(!showFullContent)}
-                className="flex items-center gap-1 text-sm text-orange-400 hover:text-orange-300 mb-2"
-              >
-                {showFullContent ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {showFullContent ? 'Show RSS content' : 'Show full article'}
-              </button>
-              {showFullContent && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default"
-                >
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: fetchFullContent.data.content }}
-                  />
-                </motion.div>
-              )}
-            </div>
-          )}
-
-          {/* Main Content - shows bilingual when in inline mode */}
-          {translationMode === 'inline' && bilingualContent ? (
-            <div
-              style={getReaderStyles(readerSettings.settings)}
-              className={cn(
-                "max-w-none",
-                showFullContent && "hidden"
-              )}
-            >
-              {bilingualContent}
-            </div>
-          ) : (
-            <div
-              style={getReaderStyles(readerSettings.settings)}
-              className={cn(
-                "prose prose-sm dark:prose-invert max-w-none",
-                "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
-                "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary",
-                showFullContent && "hidden"
-              )}
-              dangerouslySetInnerHTML={{ __html: entry.content }}
+          >
+            <BilingualContent 
+              content={entry.content}
+              entryId={entry.id}
+              enabled={translateEnabled}
+              language="zh-CN"
             />
-          )}
+          </div>
 
           {/* Tags */}
           {entry.tags && entry.tags.length > 0 && (

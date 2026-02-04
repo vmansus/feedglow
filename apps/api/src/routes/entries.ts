@@ -9,8 +9,7 @@ import { createMinifluxClient, type EntriesFilter } from '../lib/miniflux.js';
 import { authMiddleware } from '../lib/auth.js';
 import {
   summarizeArticle,
-  translateArticle,
-  translateArticleStream,
+  translateParagraphs,
   generateTags,
   getAIConfigForUser,
 } from '../services/ai.js';
@@ -177,75 +176,36 @@ entries.post('/:id/summarize', async (c) => {
   }
 });
 
-// Translate entry
+// Translate paragraphs (simplified batch API)
 const translateSchema = z.object({
+  paragraphs: z.array(z.string()),
   language: z.string().default('zh-CN'),
 });
 
 entries.post(
-  '/:id/translate',
+  '/translate',
   zValidator('json', translateSchema),
   async (c) => {
-    const id = parseInt(c.req.param('id'));
-    const { language } = c.req.valid('json');
+    const { paragraphs, language } = c.req.valid('json');
     const user = c.get('user') as JWTPayload;
 
-    const client = getClient(c);
-    const entry = await client.getEntry(id);
+    if (paragraphs.length === 0) {
+      return c.json({ translations: [] });
+    }
+
+    if (paragraphs.length > 10) {
+      return c.json({ error: 'Too many paragraphs, max 10 per request' }, 400);
+    }
 
     try {
       const config = await getAIConfigForUser(user.userId);
-      const translation = await translateArticle(entry, language, config);
+      const translations = await translateParagraphs(paragraphs, language, config);
 
-      return c.json({
-        entryId: id,
-        ...translation,
-      });
+      return c.json({ translations });
     } catch (err) {
       const { message, code, status } = parseAIError(err);
       return c.json({ error: message, code }, status);
     }
-  }
-);
-
-// Stream translate entry (SSE)
-entries.get(
-  '/:id/translate/stream',
-  async (c) => {
-    const id = parseInt(c.req.param('id'));
-    const language = c.req.query('language') || 'zh-CN';
-    const user = c.get('user') as JWTPayload;
-
-    const client = getClient(c);
-    const entry = await client.getEntry(id);
-    const config = await getAIConfigForUser(user.userId);
-
-    // Create a ReadableStream for SSE
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        
-        try {
-          for await (const chunk of translateArticleStream(entry, language, config)) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-          }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
-        } catch (err) {
-          const error = err instanceof Error ? err.message : 'Translation failed';
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error })}\n\n`));
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
   }
 );
 
