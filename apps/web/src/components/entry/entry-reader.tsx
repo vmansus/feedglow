@@ -28,7 +28,6 @@ interface EntryReaderProps {
 
 export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const [translateEnabled, setTranslateEnabled] = useState(false);
-  const [translateCollapsed, setTranslateCollapsed] = useState(false);
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
   const [showChat, setShowChat] = useState(false);
@@ -42,7 +41,6 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   useEffect(() => {
     setIsStarred(entry.starred);
     setTranslateEnabled(false);
-    setTranslateCollapsed(false);
     setReadProgress(0);
   }, [entry.id, entry.starred]);
 
@@ -242,35 +240,17 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
-            {/* Translation toggle - collapses to icon when disabled */}
-            {translateEnabled ? (
-              <button
-                onClick={() => setTranslateEnabled(false)}
-                className="btn-subtle flex items-center gap-2 bg-orange-500/20 text-orange-400 border-orange-500/40"
-              >
-                <Languages className="w-4 h-4" />
-                关闭翻译
-              </button>
-            ) : translateCollapsed ? (
-              <button
-                onClick={() => setTranslateEnabled(true)}
-                className="p-2 rounded-lg text-orange-400/70 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
-                title="开启翻译"
-              >
-                <Languages className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setTranslateEnabled(true);
-                  setTranslateCollapsed(true);
-                }}
-                className="btn-subtle flex items-center gap-2"
-              >
-                <Languages className="w-4 h-4" />
-                逐段翻译
-              </button>
-            )}
+            {/* Translation toggle - simple on/off */}
+            <button
+              onClick={() => setTranslateEnabled(!translateEnabled)}
+              className={cn(
+                "btn-subtle flex items-center gap-2",
+                translateEnabled && "bg-orange-500/20 text-orange-400 border-orange-500/40"
+              )}
+            >
+              <Languages className="w-4 h-4" />
+              {translateEnabled ? '关闭翻译' : '逐段翻译'}
+            </button>
           </div>
 
           {/* Main Content - with optional bilingual translation */}
