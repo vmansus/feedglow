@@ -45,21 +45,29 @@ export default function StatsPage() {
   const { data: summary } = useQuery({
     queryKey: ['stats', 'summary'],
     queryFn: () => api.getStatsSummary(),
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: topics } = useQuery({
     queryKey: ['stats', 'topics', timeRange],
     queryFn: () => api.getTopicStats(timeRange),
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: trends } = useQuery({
     queryKey: ['stats', 'trends', timeRange],
     queryFn: () => api.getTrendStats(timeRange),
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: achievements } = useQuery({
     queryKey: ['stats', 'achievements'],
     queryFn: () => api.getAchievements(),
+    retry: false,
+    throwOnError: false,
   });
 
   // Default data for development/demo

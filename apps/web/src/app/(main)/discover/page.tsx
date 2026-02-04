@@ -38,24 +38,32 @@ export default function DiscoverPage() {
   const { data: recommended, isLoading: loadingRecommended } = useQuery({
     queryKey: ['discover', 'recommended'],
     queryFn: () => api.getRecommendedFeeds(),
+    retry: false,
+    throwOnError: false,
   });
 
   // Fetch trending feeds
   const { data: trending, isLoading: loadingTrending } = useQuery({
     queryKey: ['discover', 'trending'],
     queryFn: () => api.getTrendingFeeds(),
+    retry: false,
+    throwOnError: false,
   });
 
   // Fetch collections
   const { data: collections, isLoading: loadingCollections } = useQuery({
     queryKey: ['discover', 'collections'],
     queryFn: () => api.getFeedCollections(),
+    retry: false,
+    throwOnError: false,
   });
 
   // Search feeds
   const { data: searchResults, isLoading: searching } = useQuery({
     queryKey: ['discover', 'search', searchQuery],
     queryFn: () => api.searchFeeds(searchQuery),
+    retry: false,
+    throwOnError: false,
     enabled: searchQuery.length > 2,
   });
 

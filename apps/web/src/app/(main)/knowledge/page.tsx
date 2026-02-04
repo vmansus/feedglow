@@ -43,12 +43,16 @@ export default function KnowledgePage() {
   const { data: graphData, isLoading } = useQuery({
     queryKey: ['knowledge', 'graph', searchQuery],
     queryFn: () => api.getKnowledgeGraph(searchQuery || undefined),
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: relatedEntries } = useQuery({
     queryKey: ['knowledge', 'related', selectedNode?.id],
     queryFn: () => selectedNode ? api.getRelatedEntries(selectedNode.id) : null,
     enabled: !!selectedNode && selectedNode.type === 'article',
+    retry: false,
+    throwOnError: false,
   });
 
   // Demo data for development
