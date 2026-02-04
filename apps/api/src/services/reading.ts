@@ -1,128 +1,112 @@
 /**
- * Reading Preferences & Progress Service
+ * Reading Preferences & Progress Service (PostgreSQL)
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
-
-const DATA_DIR = process.env.DATA_DIR || join(process.cwd(), 'data', 'reading');
+import { query } from '../lib/db.js';
 
 // Reading preferences
 export interface ReadingPreferences {
-  fontSize: number;        // 14-24
-  fontFamily: 'sans' | 'serif' | 'mono';
-  lineHeight: number;      // 1.4-2.0
-  contentWidth: 'narrow' | 'medium' | 'wide';  // 600/720/900px
+  fontSize: 'small' | 'medium' | 'large' | 'xlarge';
+  fontFamily: 'system' | 'serif' | 'sans-serif' | 'mono';
+  lineHeight: number;
+  contentWidth: 'narrow' | 'medium' | 'wide' | 'full';
   theme: 'light' | 'dark' | 'sepia' | 'system';
   autoMarkRead: boolean;
+  autoMarkReadDelay: number;
   showImages: boolean;
-  showReadingTime: boolean;
 }
 
-// Reading progress for an entry
+// Reading progress
 export interface ReadingProgress {
   entryId: number;
-  scrollPosition: number;  // percentage 0-100
-  readAt: number;          // timestamp
-  completed: boolean;
+  progress: number;       // 0-1
+  scrollPosition: number; // pixels
+  timeSpent: number;      // seconds
+  finished: boolean;
+  lastReadAt: number;     // timestamp
 }
 
-// User reading data
-interface UserReadingData {
-  userId: number;
-  preferences: ReadingPreferences;
-  progress: Record<number, ReadingProgress>;  // entryId -> progress
-  updatedAt: number;
-}
-
-// Default preferences
 const DEFAULT_PREFERENCES: ReadingPreferences = {
-  fontSize: 18,
-  fontFamily: 'sans',
+  fontSize: 'medium',
+  fontFamily: 'system',
   lineHeight: 1.6,
   contentWidth: 'medium',
   theme: 'system',
   autoMarkRead: true,
+  autoMarkReadDelay: 3,
   showImages: true,
-  showReadingTime: true,
 };
 
-async function ensureDataDir(): Promise<void> {
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true });
-  }
-}
-
-function getDataPath(userId: number): string {
-  return join(DATA_DIR, `user-${userId}.json`);
-}
-
 /**
- * Load user reading data
- */
-async function loadUserData(userId: number): Promise<UserReadingData> {
-  await ensureDataDir();
-  const path = getDataPath(userId);
-
-  try {
-    const data = await readFile(path, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return {
-      userId,
-      preferences: { ...DEFAULT_PREFERENCES },
-      progress: {},
-      updatedAt: Date.now(),
-    };
-  }
-}
-
-/**
- * Save user reading data
- */
-async function saveUserData(data: UserReadingData): Promise<void> {
-  await ensureDataDir();
-  const path = getDataPath(data.userId);
-  data.updatedAt = Date.now();
-  await writeFile(path, JSON.stringify(data, null, 2));
-}
-
-/**
- * Get reading preferences
+ * Get reading preferences for a user
  */
 export async function getReadingPreferences(userId: number): Promise<ReadingPreferences> {
-  const data = await loadUserData(userId);
-  return data.preferences;
+  const result = await query(
+    'SELECT * FROM fg_reading_preferences WHERE user_id = $1',
+    [userId]
+  );
+
+  if (result.rows.length === 0) {
+    return { ...DEFAULT_PREFERENCES };
+  }
+
+  const row = result.rows[0];
+  return {
+    fontSize: row.font_size,
+    fontFamily: row.font_family,
+    lineHeight: parseFloat(row.line_height),
+    contentWidth: row.content_width,
+    theme: row.theme,
+    autoMarkRead: row.auto_mark_read,
+    autoMarkReadDelay: row.auto_mark_read_delay,
+    showImages: row.show_images,
+  };
 }
 
 /**
- * Update reading preferences
+ * Update reading preferences for a user
  */
 export async function updateReadingPreferences(
   userId: number,
   updates: Partial<ReadingPreferences>
 ): Promise<ReadingPreferences> {
-  const data = await loadUserData(userId);
-  
-  data.preferences = {
-    ...data.preferences,
-    ...updates,
-  };
-  
-  await saveUserData(data);
-  return data.preferences;
+  const current = await getReadingPreferences(userId);
+  const merged = { ...current, ...updates };
+
+  await query(
+    `INSERT INTO fg_reading_preferences 
+       (user_id, font_size, font_family, line_height, content_width, theme, auto_mark_read, auto_mark_read_delay, show_images, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       font_size = $2, font_family = $3, line_height = $4, content_width = $5, theme = $6,
+       auto_mark_read = $7, auto_mark_read_delay = $8, show_images = $9, updated_at = NOW()`,
+    [userId, merged.fontSize, merged.fontFamily, merged.lineHeight, merged.contentWidth,
+     merged.theme, merged.autoMarkRead, merged.autoMarkReadDelay, merged.showImages]
+  );
+
+  return merged;
 }
 
 /**
  * Get reading progress for an entry
  */
-export async function getReadingProgress(
-  userId: number,
-  entryId: number
-): Promise<ReadingProgress | null> {
-  const data = await loadUserData(userId);
-  return data.progress[entryId] || null;
+export async function getReadingProgress(userId: number, entryId: number): Promise<ReadingProgress | null> {
+  const result = await query(
+    'SELECT * FROM fg_reading_progress WHERE user_id = $1 AND entry_id = $2',
+    [userId, entryId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0];
+  return {
+    entryId: row.entry_id,
+    progress: parseFloat(row.progress),
+    scrollPosition: row.scroll_position,
+    timeSpent: row.time_spent,
+    finished: row.finished,
+    lastReadAt: parseInt(row.last_read_at),
+  };
 }
 
 /**
@@ -130,50 +114,48 @@ export async function getReadingProgress(
  */
 export async function saveReadingProgress(
   userId: number,
-  progress: Omit<ReadingProgress, 'readAt'>
+  entryId: number,
+  progress: Partial<ReadingProgress>
 ): Promise<ReadingProgress> {
-  const data = await loadUserData(userId);
-  
-  const fullProgress: ReadingProgress = {
-    ...progress,
-    readAt: Date.now(),
+  const current = await getReadingProgress(userId, entryId);
+
+  const merged = {
+    progress: progress.progress ?? current?.progress ?? 0,
+    scrollPosition: progress.scrollPosition ?? current?.scrollPosition ?? 0,
+    timeSpent: (current?.timeSpent ?? 0) + (progress.timeSpent ?? 0),
+    finished: progress.finished ?? current?.finished ?? false,
+    lastReadAt: Date.now(),
   };
-  
-  data.progress[progress.entryId] = fullProgress;
-  
-  // Keep only last 500 entries
-  const entries = Object.entries(data.progress);
-  if (entries.length > 500) {
-    const sorted = entries.sort((a, b) => b[1].readAt - a[1].readAt);
-    data.progress = Object.fromEntries(sorted.slice(0, 500));
-  }
-  
-  await saveUserData(data);
-  return fullProgress;
+
+  await query(
+    `INSERT INTO fg_reading_progress (user_id, entry_id, progress, scroll_position, time_spent, finished, last_read_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+     ON CONFLICT (user_id, entry_id) DO UPDATE SET
+       progress = $3, scroll_position = $4, time_spent = $5, finished = $6, last_read_at = $7, updated_at = NOW()`,
+    [userId, entryId, merged.progress, merged.scrollPosition, merged.timeSpent, merged.finished, merged.lastReadAt]
+  );
+
+  return { entryId, ...merged };
 }
 
 /**
- * Get recent reading history
+ * Get reading history (recent entries with progress)
  */
 export async function getReadingHistory(
   userId: number,
-  limit: number = 20
+  limit: number = 50
 ): Promise<ReadingProgress[]> {
-  const data = await loadUserData(userId);
-  
-  return Object.values(data.progress)
-    .sort((a, b) => b.readAt - a.readAt)
-    .slice(0, limit);
-}
+  const result = await query(
+    `SELECT * FROM fg_reading_progress WHERE user_id = $1 ORDER BY last_read_at DESC LIMIT $2`,
+    [userId, limit]
+  );
 
-/**
- * Clear reading progress for an entry
- */
-export async function clearReadingProgress(
-  userId: number,
-  entryId: number
-): Promise<void> {
-  const data = await loadUserData(userId);
-  delete data.progress[entryId];
-  await saveUserData(data);
+  return result.rows.map(row => ({
+    entryId: row.entry_id,
+    progress: parseFloat(row.progress),
+    scrollPosition: row.scroll_position,
+    timeSpent: row.time_spent,
+    finished: row.finished,
+    lastReadAt: parseInt(row.last_read_at),
+  }));
 }

@@ -9,6 +9,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { getMinifluxClient } from './lib/miniflux.js';
+import { runMigrations } from './lib/db.js';
 
 // Routes
 import feeds from './routes/feeds.js';
@@ -133,16 +134,28 @@ app.notFound((c) => {
 // Start server
 const port = parseInt(process.env.PORT || '3001');
 
-console.log(`
+async function start() {
+  // Run database migrations
+  try {
+    await runMigrations();
+  } catch (err) {
+    console.error('[DB] Migration failed:', err instanceof Error ? err.message : err);
+    console.warn('[DB] Continuing without PostgreSQL — some features may be unavailable');
+  }
+
+  console.log(`
 🌟 FeedGlow API Server
 ━━━━━━━━━━━━━━━━━━━━━━
 Port: ${port}
 Miniflux: ${process.env.MINIFLUX_URL || 'Not configured'}
-AI Provider: ${process.env.AI_PROVIDER || 'openai'}
+Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'Not configured'}
 ━━━━━━━━━━━━━━━━━━━━━━
-`);
+  `);
 
-serve({
-  fetch: app.fetch,
-  port,
-});
+  serve({
+    fetch: app.fetch,
+    port,
+  });
+}
+
+start();

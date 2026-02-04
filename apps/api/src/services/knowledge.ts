@@ -1,19 +1,15 @@
 /**
- * Knowledge Graph Service
+ * Knowledge Graph Service (PostgreSQL)
  * Article relationships and connections
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { query } from '../lib/db.js';
 import type { Entry } from '../lib/miniflux.js';
 import { findSimilarEntries, indexEntry } from './chat.js';
 
-const DATA_DIR = process.env.DATA_DIR || join(process.cwd(), 'data', 'knowledge');
-
 // Graph node (article)
 export interface GraphNode {
-  id: number;           // entry id
+  id: number;
   title: string;
   feedId: number;
   feedTitle?: string;
@@ -23,84 +19,10 @@ export interface GraphNode {
 
 // Graph edge (relationship)
 export interface GraphEdge {
-  source: number;       // entry id
-  target: number;       // entry id
+  source: number;
+  target: number;
   type: 'similar' | 'same-topic' | 'same-feed' | 'reference';
-  weight: number;       // 0-1 strength
-}
-
-// User knowledge graph
-interface UserKnowledgeGraph {
-  userId: number;
-  nodes: Map<number, GraphNode>;
-  edges: GraphEdge[];
-  lastUpdated: number;
-}
-
-// In-memory cache
-const graphCache = new Map<number, UserKnowledgeGraph>();
-
-async function ensureDataDir(): Promise<void> {
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true });
-  }
-}
-
-function getGraphPath(userId: number): string {
-  return join(DATA_DIR, `graph-${userId}.json`);
-}
-
-/**
- * Load user knowledge graph
- */
-async function loadGraph(userId: number): Promise<UserKnowledgeGraph> {
-  // Check cache
-  if (graphCache.has(userId)) {
-    return graphCache.get(userId)!;
-  }
-
-  await ensureDataDir();
-  const path = getGraphPath(userId);
-
-  try {
-    const data = await readFile(path, 'utf-8');
-    const parsed = JSON.parse(data);
-    const graph: UserKnowledgeGraph = {
-      userId: parsed.userId,
-      nodes: new Map(Object.entries(parsed.nodes).map(([k, v]) => [parseInt(k), v as GraphNode])),
-      edges: parsed.edges,
-      lastUpdated: parsed.lastUpdated,
-    };
-    graphCache.set(userId, graph);
-    return graph;
-  } catch {
-    const graph: UserKnowledgeGraph = {
-      userId,
-      nodes: new Map(),
-      edges: [],
-      lastUpdated: Date.now(),
-    };
-    graphCache.set(userId, graph);
-    return graph;
-  }
-}
-
-/**
- * Save user knowledge graph
- */
-async function saveGraph(graph: UserKnowledgeGraph): Promise<void> {
-  await ensureDataDir();
-  const path = getGraphPath(graph.userId);
-
-  const serializable = {
-    userId: graph.userId,
-    nodes: Object.fromEntries(graph.nodes),
-    edges: graph.edges,
-    lastUpdated: Date.now(),
-  };
-
-  await writeFile(path, JSON.stringify(serializable, null, 2));
-  graphCache.set(graph.userId, graph);
+  weight: number;
 }
 
 /**
@@ -111,23 +33,19 @@ export async function addToGraph(
   entry: Entry,
   feedTitle?: string
 ): Promise<void> {
-  const graph = await loadGraph(userId);
-
-  // Add node
-  const node: GraphNode = {
-    id: entry.id,
-    title: entry.title,
-    feedId: entry.feed_id,
-    feedTitle,
-    publishedAt: entry.published_at,
-    tags: entry.tags,
-  };
-  graph.nodes.set(entry.id, node);
+  // Upsert node
+  await query(
+    `INSERT INTO fg_knowledge_nodes (user_id, entry_id, title, feed_id, feed_title, published_at, tags)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (user_id, entry_id) DO UPDATE SET
+       title = $3, feed_title = $5, tags = $7`,
+    [userId, entry.id, entry.title, entry.feed_id, feedTitle || null, entry.published_at, entry.tags || []]
+  );
 
   // Index for similarity search
   await indexEntry(entry, userId);
 
-  // Find and add edges for similar articles
+  // Find similar articles
   const similar = await findSimilarEntries(
     `${entry.title} ${stripHtml(entry.content).slice(0, 1000)}`,
     userId,
@@ -136,64 +54,47 @@ export async function addToGraph(
 
   for (const sim of similar) {
     if (sim.entryId === entry.id) continue;
-    if (sim.similarity < 0.3) continue; // Threshold
+    if (sim.similarity < 0.3) continue;
 
-    // Check if edge already exists
-    const existingEdge = graph.edges.find(
-      e => (e.source === entry.id && e.target === sim.entryId) ||
-           (e.source === sim.entryId && e.target === entry.id)
+    await query(
+      `INSERT INTO fg_knowledge_edges (user_id, source_entry_id, target_entry_id, type, weight)
+       VALUES ($1, $2, $3, 'similar', $4)
+       ON CONFLICT (user_id, source_entry_id, target_entry_id, type) DO UPDATE SET weight = $4`,
+      [userId, entry.id, sim.entryId, sim.similarity]
     );
-
-    if (!existingEdge) {
-      graph.edges.push({
-        source: entry.id,
-        target: sim.entryId,
-        type: 'similar',
-        weight: sim.similarity,
-      });
-    }
   }
 
   // Add same-feed edges
-  for (const [id, existingNode] of graph.nodes) {
-    if (id === entry.id) continue;
-    if (existingNode.feedId === entry.feed_id) {
-      const existingEdge = graph.edges.find(
-        e => e.type === 'same-feed' &&
-             ((e.source === entry.id && e.target === id) ||
-              (e.source === id && e.target === entry.id))
-      );
+  const sameFeedNodes = await query(
+    `SELECT entry_id FROM fg_knowledge_nodes WHERE user_id = $1 AND feed_id = $2 AND entry_id != $3 LIMIT 20`,
+    [userId, entry.feed_id, entry.id]
+  );
 
-      if (!existingEdge) {
-        graph.edges.push({
-          source: entry.id,
-          target: id,
-          type: 'same-feed',
-          weight: 0.5,
-        });
-      }
-    }
+  for (const row of sameFeedNodes.rows) {
+    await query(
+      `INSERT INTO fg_knowledge_edges (user_id, source_entry_id, target_entry_id, type, weight)
+       VALUES ($1, $2, $3, 'same-feed', 0.5)
+       ON CONFLICT (user_id, source_entry_id, target_entry_id, type) DO NOTHING`,
+      [userId, entry.id, row.entry_id]
+    );
   }
 
-  // Limit graph size (keep last 500 nodes)
-  if (graph.nodes.size > 500) {
-    const sorted = Array.from(graph.nodes.entries())
-      .sort((a, b) => new Date(b[1].publishedAt).getTime() - new Date(a[1].publishedAt).getTime());
-    
-    const toKeep = new Set(sorted.slice(0, 500).map(([id]) => id));
-    
-    // Remove old nodes
-    for (const [id] of graph.nodes) {
-      if (!toKeep.has(id)) {
-        graph.nodes.delete(id);
-      }
-    }
-    
-    // Remove edges referencing deleted nodes
-    graph.edges = graph.edges.filter(e => toKeep.has(e.source) && toKeep.has(e.target));
-  }
+  // Limit graph size (keep latest 500 nodes per user)
+  await query(
+    `DELETE FROM fg_knowledge_nodes WHERE user_id = $1 AND entry_id NOT IN (
+       SELECT entry_id FROM fg_knowledge_nodes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 500
+     )`,
+    [userId]
+  );
 
-  await saveGraph(graph);
+  // Clean orphan edges
+  await query(
+    `DELETE FROM fg_knowledge_edges WHERE user_id = $1 AND (
+       source_entry_id NOT IN (SELECT entry_id FROM fg_knowledge_nodes WHERE user_id = $1) OR
+       target_entry_id NOT IN (SELECT entry_id FROM fg_knowledge_nodes WHERE user_id = $1)
+     )`,
+    [userId]
+  );
 }
 
 /**
@@ -203,17 +104,38 @@ export async function getGraph(
   userId: number,
   limit: number = 100
 ): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
-  const graph = await loadGraph(userId);
+  const nodesResult = await query(
+    `SELECT * FROM fg_knowledge_nodes WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit]
+  );
 
-  // Get most recent nodes
-  const nodes = Array.from(graph.nodes.values())
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, limit);
+  const nodes: GraphNode[] = nodesResult.rows.map(row => ({
+    id: row.entry_id,
+    title: row.title,
+    feedId: row.feed_id,
+    feedTitle: row.feed_title,
+    publishedAt: row.published_at,
+    tags: row.tags,
+  }));
 
-  const nodeIds = new Set(nodes.map(n => n.id));
+  const nodeIds = nodes.map(n => n.id);
 
-  // Filter edges to only include visible nodes
-  const edges = graph.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+  if (nodeIds.length === 0) {
+    return { nodes: [], edges: [] };
+  }
+
+  const edgesResult = await query(
+    `SELECT * FROM fg_knowledge_edges WHERE user_id = $1 
+     AND source_entry_id = ANY($2) AND target_entry_id = ANY($2)`,
+    [userId, nodeIds]
+  );
+
+  const edges: GraphEdge[] = edgesResult.rows.map(row => ({
+    source: row.source_entry_id,
+    target: row.target_entry_id,
+    type: row.type,
+    weight: parseFloat(row.weight),
+  }));
 
   return { nodes, edges };
 }
@@ -226,36 +148,31 @@ export async function getRelatedArticles(
   entryId: number,
   limit: number = 10
 ): Promise<{ entry: GraphNode; type: string; weight: number }[]> {
-  const graph = await loadGraph(userId);
+  const result = await query(
+    `SELECT e.*, n.title, n.feed_id, n.feed_title, n.published_at, n.tags
+     FROM fg_knowledge_edges e
+     JOIN fg_knowledge_nodes n ON n.user_id = e.user_id AND (
+       (e.source_entry_id = $2 AND n.entry_id = e.target_entry_id) OR
+       (e.target_entry_id = $2 AND n.entry_id = e.source_entry_id)
+     )
+     WHERE e.user_id = $1 AND (e.source_entry_id = $2 OR e.target_entry_id = $2)
+     ORDER BY e.weight DESC
+     LIMIT $3`,
+    [userId, entryId, limit]
+  );
 
-  // Find all edges containing this entry
-  const related: { entry: GraphNode; type: string; weight: number }[] = [];
-
-  for (const edge of graph.edges) {
-    let relatedId: number | null = null;
-
-    if (edge.source === entryId) {
-      relatedId = edge.target;
-    } else if (edge.target === entryId) {
-      relatedId = edge.source;
-    }
-
-    if (relatedId !== null) {
-      const node = graph.nodes.get(relatedId);
-      if (node) {
-        related.push({
-          entry: node,
-          type: edge.type,
-          weight: edge.weight,
-        });
-      }
-    }
-  }
-
-  // Sort by weight and limit
-  return related
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, limit);
+  return result.rows.map(row => ({
+    entry: {
+      id: row.entry_id,
+      title: row.title,
+      feedId: row.feed_id,
+      feedTitle: row.feed_title,
+      publishedAt: row.published_at,
+      tags: row.tags,
+    },
+    type: row.type,
+    weight: parseFloat(row.weight),
+  }));
 }
 
 /**
@@ -267,46 +184,29 @@ export async function getGraphStats(userId: number): Promise<{
   clusters: number;
   avgConnections: number;
 }> {
-  const graph = await loadGraph(userId);
+  const nodeResult = await query(
+    'SELECT COUNT(*) as cnt FROM fg_knowledge_nodes WHERE user_id = $1',
+    [userId]
+  );
+  const edgeResult = await query(
+    'SELECT COUNT(*) as cnt FROM fg_knowledge_edges WHERE user_id = $1',
+    [userId]
+  );
 
-  const nodeCount = graph.nodes.size;
-  const edgeCount = graph.edges.length;
+  const nodeCount = parseInt(nodeResult.rows[0].cnt);
+  const edgeCount = parseInt(edgeResult.rows[0].cnt);
+  const avgConnections = nodeCount > 0 ? Math.round((edgeCount * 2) / nodeCount * 10) / 10 : 0;
 
-  // Simple cluster estimation (connected components)
-  const visited = new Set<number>();
-  let clusters = 0;
+  // Simple cluster estimation
+  const feedResult = await query(
+    'SELECT COUNT(DISTINCT feed_id) as cnt FROM fg_knowledge_nodes WHERE user_id = $1',
+    [userId]
+  );
+  const clusters = parseInt(feedResult.rows[0].cnt);
 
-  function dfs(nodeId: number) {
-    if (visited.has(nodeId)) return;
-    visited.add(nodeId);
-
-    for (const edge of graph.edges) {
-      if (edge.source === nodeId && !visited.has(edge.target)) {
-        dfs(edge.target);
-      } else if (edge.target === nodeId && !visited.has(edge.source)) {
-        dfs(edge.source);
-      }
-    }
-  }
-
-  for (const [nodeId] of graph.nodes) {
-    if (!visited.has(nodeId)) {
-      dfs(nodeId);
-      clusters++;
-    }
-  }
-
-  const avgConnections = nodeCount > 0 ? (edgeCount * 2) / nodeCount : 0;
-
-  return {
-    nodeCount,
-    edgeCount,
-    clusters,
-    avgConnections: Math.round(avgConnections * 10) / 10,
-  };
+  return { nodeCount, edgeCount, clusters, avgConnections };
 }
 
-// Helper
 function stripHtml(html: string): string {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
