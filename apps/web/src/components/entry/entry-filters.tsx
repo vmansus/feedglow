@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { cn } from '@feedglow/ui';
 import { 
   ArrowUpDown, 
-  Filter, 
   Star, 
   CheckCircle2, 
   Circle,
