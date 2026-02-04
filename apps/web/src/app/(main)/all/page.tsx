@@ -28,10 +28,10 @@ export default function AllPage() {
 
   const entries = data?.entries || [];
   
-  // Apply client-side sorting (API might not support all sort options)
+  // Apply client-side sorting
   const sortedEntries = [...entries].sort((a, b) => {
-    const aDate = new Date(filters.order === 'published_at' ? a.publishedAt : a.createdAt || a.publishedAt);
-    const bDate = new Date(filters.order === 'published_at' ? b.publishedAt : b.createdAt || b.publishedAt);
+    const aDate = new Date(a.publishedAt);
+    const bDate = new Date(b.publishedAt);
     return filters.direction === 'desc' ? bDate.getTime() - aDate.getTime() : aDate.getTime() - bDate.getTime();
   });
 
