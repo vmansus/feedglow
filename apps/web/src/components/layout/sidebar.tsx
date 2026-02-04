@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@feedglow/ui';
-import { useFeeds, useCategories, useMarkFeedAsRead, useMarkCategoryAsRead, useMarkAllAsRead } from '@/hooks';
+import { useFeeds, useCategories, useMarkFeedAsRead, useMarkCategoryAsRead } from '@/hooks';
 import { useAuth } from '@/contexts/auth-context';
 import { useCommandPalette } from '@/components/ui/command-palette';
 import { useContextMenu } from '@/components/ui/context-menu';
@@ -24,7 +24,6 @@ import {
   PanelLeft,
   CheckCircle,
   RefreshCw,
-  Trash2,
   ExternalLink
 } from 'lucide-react';
 import { useLayout } from '@/contexts/layout-context';
@@ -60,7 +59,6 @@ export function Sidebar() {
   
   const markFeedAsRead = useMarkFeedAsRead();
   const markCategoryAsRead = useMarkCategoryAsRead();
-  const markAllAsRead = useMarkAllAsRead();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
 

@@ -7,7 +7,6 @@ import {
   RefreshCw, 
   Pause, 
   Play,
-  ChevronDown,
   Clock,
   X
 } from 'lucide-react';
