@@ -55,8 +55,8 @@ export function useDeleteFeed() {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
       toast.success('Feed deleted');
     },
-    onError: () => {
-      toast.error('Failed to delete feed');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete feed');
     },
   });
 }
@@ -70,8 +70,8 @@ export function useRefreshFeed() {
       queryClient.invalidateQueries({ queryKey: ['entries'] });
       toast.success('Feed refreshed!');
     },
-    onError: () => {
-      toast.error('Failed to refresh feed');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to refresh feed');
     },
   });
 }
@@ -86,8 +86,8 @@ export function useRefreshAllFeeds() {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
       toast.success('All feeds refreshed!');
     },
-    onError: () => {
-      toast.error('Failed to refresh feeds');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to refresh feeds');
     },
   });
 }

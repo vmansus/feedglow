@@ -34,8 +34,8 @@ export function AISettings() {
       setEnableSummary(data.enableSummary);
       setEnableTranslation(data.enableTranslation);
       setApiKey('');
-    } catch {
-      toast.error('Failed to load AI settings');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load AI settings');
     } finally {
       setLoading(false);
     }
@@ -60,8 +60,8 @@ export function AISettings() {
       setSettings(result.settings as AISettingsResponse);
       setApiKey('');
       toast.success('AI settings saved!');
-    } catch {
-      toast.error('Failed to save settings');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -82,8 +82,8 @@ export function AISettings() {
       } else {
         toast.error(result.message);
       }
-    } catch {
-      toast.error('Connection test failed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Connection test failed');
     } finally {
       setTesting(false);
     }
@@ -97,8 +97,8 @@ export function AISettings() {
       const result = await api.updateAISettings({ clearApiKey: true });
       setSettings(result.settings as AISettingsResponse);
       toast.success('API key removed');
-    } catch {
-      toast.error('Failed to remove API key');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to remove API key');
     } finally {
       setSaving(false);
     }

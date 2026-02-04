@@ -107,8 +107,8 @@ export function useUpdateEntriesStatus() {
       queryClient.invalidateQueries({ queryKey: ['feeds'] });
       toast.success(`${entryIds.length} entries marked as ${status}`);
     },
-    onError: () => {
-      toast.error('Failed to update entries');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update entries');
     },
   });
 }
@@ -132,8 +132,8 @@ export function useSummarize() {
       queryClient.invalidateQueries({ queryKey: ['entries', data.entryId] });
       toast.success('Summary generated!');
     },
-    onError: () => {
-      toast.error('Failed to generate summary');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to generate summary');
     },
   });
 }
@@ -148,8 +148,8 @@ export function useTranslate() {
       queryClient.invalidateQueries({ queryKey: ['entries', data.entryId] });
       toast.success('Translation complete!');
     },
-    onError: () => {
-      toast.error('Failed to translate');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to translate');
     },
   });
 }
@@ -160,8 +160,8 @@ export function useGenerateTags() {
     onSuccess: () => {
       toast.success('Tags generated!');
     },
-    onError: () => {
-      toast.error('Failed to generate tags');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to generate tags');
     },
   });
 }
