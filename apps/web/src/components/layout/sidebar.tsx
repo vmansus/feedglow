@@ -63,7 +63,7 @@ export function Sidebar() {
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
 
   // Context menu handlers
-  const handleFeedContextMenu = (e: React.MouseEvent, feedId: number, feedTitle: string, feedUrl?: string) => {
+  const handleFeedContextMenu = (e: React.MouseEvent, feedId: number, _feedTitle: string, feedUrl?: string) => {
     showMenu(e, [
       {
         label: '全部标记为已读',
