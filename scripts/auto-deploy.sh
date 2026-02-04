@@ -24,9 +24,11 @@ git pull origin develop
 pnpm install --frozen-lockfile 2>/dev/null || true
 
 # Build
+pnpm build --filter=@feedglow/api 2>&1 | tail -5
 pnpm build --filter=@feedglow/web 2>&1 | tail -5
 
 # Restart
+pm2 restart feedglow-api --update-env
 pm2 restart feedglow-web --update-env
 
 echo "[$(date)] Deployed!"
