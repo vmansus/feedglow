@@ -220,21 +220,31 @@ entries.get(
     const entry = await client.getEntry(id);
     const config = await getAIConfigForUser(user.userId);
 
-    // Set SSE headers
-    c.header('Content-Type', 'text/event-stream');
-    c.header('Cache-Control', 'no-cache');
-    c.header('Connection', 'keep-alive');
-
-    return c.stream(async (stream) => {
-      try {
-        for await (const chunk of translateArticleStream(entry, language, config)) {
-          await stream.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    // Create a ReadableStream for SSE
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        
+        try {
+          for await (const chunk of translateArticleStream(entry, language, config)) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
+        } catch (err) {
+          const error = err instanceof Error ? err.message : 'Translation failed';
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error })}\n\n`));
+        } finally {
+          controller.close();
         }
-        await stream.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-      } catch (err) {
-        const error = err instanceof Error ? err.message : 'Translation failed';
-        await stream.write(`data: ${JSON.stringify({ type: 'error', error })}\n\n`);
-      }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
   }
 );
