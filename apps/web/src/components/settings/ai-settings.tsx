@@ -137,8 +137,8 @@ export function AISettings() {
             onChange={(e) => {
               const newProvider = e.target.value as AIProvider;
               setProvider(newProvider);
-              setBaseUrl(settings?.defaultBaseUrls[newProvider] || '');
-              setModel(settings?.defaultModels[newProvider] || '');
+              setBaseUrl(settings?.defaultBaseUrls?.[newProvider] || '');
+              setModel(settings?.defaultModels?.[newProvider] || '');
             }}
             className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
@@ -202,7 +202,7 @@ export function AISettings() {
               type="url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder={settings?.defaultBaseUrls[provider] || 'https://api.example.com/v1'}
+              placeholder={settings?.defaultBaseUrls?.[provider] || 'https://api.example.com/v1'}
               className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
@@ -217,11 +217,11 @@ export function AISettings() {
             type="text"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder={settings?.defaultModels[provider] || 'gpt-4o-mini'}
+            placeholder={settings?.defaultModels?.[provider] || 'gpt-4o-mini'}
             className="w-full px-3 py-2 border border-default rounded-lg surface-elevated text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))] focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
           <p className="mt-1 text-sm text-muted">
-            Leave empty to use default: {settings?.defaultModels[provider]}
+            Leave empty to use default: {settings?.defaultModels?.[provider]}
           </p>
         </div>
 
