@@ -35,13 +35,81 @@ function getClient(c: any) {
   return createMinifluxClient({ baseUrl: minifluxUrl, apiKey: minifluxApiKey });
 }
 
-// List entries with filters
+// ============ Search (must be before /:id) ============
+
+// Full-text keyword search
+entries.get('/search', async (c) => {
+  const q = c.req.query('q');
+  if (!q) {
+    return c.json({ error: 'Query parameter q is required' }, 400);
+  }
+
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+  const status = c.req.query('status') as EntriesFilter['status'];
+  const starred = c.req.query('starred') === 'true' || undefined;
+  const categoryId = c.req.query('categoryId') ? parseInt(c.req.query('categoryId')!) : undefined;
+  const feedId = c.req.query('feedId') ? parseInt(c.req.query('feedId')!) : undefined;
+
+  const client = getClient(c);
+
+  // Use Miniflux's built-in PG full-text search
+  const filter: EntriesFilter = {
+    search: q,
+    limit,
+    offset,
+    status,
+    starred,
+    category_id: categoryId,
+    order: 'published_at',
+    direction: 'desc',
+  };
+
+  let result;
+  if (feedId) {
+    result = await client.getFeedEntries(feedId, filter);
+  } else {
+    result = await client.getEntries(filter);
+  }
+
+  return c.json({
+    query: q,
+    ...result,
+  });
+});
+
+// ============ Batch Operations (must be before /:id) ============
+
+// Mark all entries as read
+entries.post('/mark-all-read', async (c) => {
+  const client = getClient(c);
+  await client.markAllEntriesAsRead();
+  return c.json({ success: true });
+});
+
+// Batch mark entries as read
+const batchMarkReadSchema = z.object({
+  entryIds: z.array(z.number()).min(1).max(1000),
+});
+
+entries.post('/mark-read', zValidator('json', batchMarkReadSchema), async (c) => {
+  const { entryIds } = c.req.valid('json');
+  const client = getClient(c);
+  await client.updateEntryStatus(entryIds, 'read');
+  return c.json({ success: true, count: entryIds.length });
+});
+
+// List entries with filters (enhanced)
 entries.get('/', async (c) => {
   const status = c.req.query('status') as EntriesFilter['status'];
   const limit = parseInt(c.req.query('limit') || '50');
   const offset = parseInt(c.req.query('offset') || '0');
   const starred = c.req.query('starred') === 'true';
   const search = c.req.query('search');
+  const order = (c.req.query('order') || 'published_at') as EntriesFilter['order'];
+  const direction = (c.req.query('direction') || 'desc') as EntriesFilter['direction'];
+  const before = c.req.query('before') ? parseInt(c.req.query('before')!) : undefined;
+  const after = c.req.query('after') ? parseInt(c.req.query('after')!) : undefined;
   const categoryId = c.req.query('categoryId')
     ? parseInt(c.req.query('categoryId')!)
     : undefined;
@@ -50,30 +118,28 @@ entries.get('/', async (c) => {
     : undefined;
 
   const client = getClient(c);
-  
-  // If feedId is specified, get entries for that specific feed
-  if (feedId) {
-    const result = await client.getFeedEntries(feedId, {
-      status,
-      limit,
-      offset,
-      order: 'published_at',
-      direction: 'desc',
-    });
-    return c.json(result);
-  }
 
-  // Otherwise get all entries with filters
-  const result = await client.getEntries({
+  const filter: EntriesFilter = {
     status,
     limit,
     offset,
     starred: starred || undefined,
     search,
     category_id: categoryId,
-    order: 'published_at',
-    direction: 'desc',
-  });
+    order,
+    direction,
+    before,
+    after,
+  };
+  
+  // If feedId is specified, get entries for that specific feed
+  if (feedId) {
+    const result = await client.getFeedEntries(feedId, filter);
+    return c.json(result);
+  }
+
+  // Otherwise get all entries with filters
+  const result = await client.getEntries(filter);
 
   return c.json(result);
 });

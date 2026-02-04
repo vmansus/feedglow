@@ -56,6 +56,14 @@ categories.patch(
   }
 );
 
+// Mark all category entries as read
+categories.post('/:id/mark-read', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const client = getClient(c);
+  await client.markCategoryEntriesAsRead(id);
+  return c.json({ success: true });
+});
+
 // Delete category
 categories.delete('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
