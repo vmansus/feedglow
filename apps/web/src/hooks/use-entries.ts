@@ -113,6 +113,128 @@ export function useUpdateEntriesStatus() {
   });
 }
 
+// Batch mark read
+export function useMarkFeedAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ feedId, before }: { feedId: number; before?: string }) =>
+      api.markFeedAsRead(feedId, before),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      toast.success('已全部标记为已读');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '标记失败');
+    },
+  });
+}
+
+export function useMarkCategoryAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ categoryId, before }: { categoryId: number; before?: string }) =>
+      api.markCategoryAsRead(categoryId, before),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('分类已全部标记为已读');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '标记失败');
+    },
+  });
+}
+
+export function useMarkAllAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('全部已标记为已读');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '标记失败');
+    },
+  });
+}
+
+// Search
+export function useSearchEntries(params: api.SearchParams | null) {
+  return useQuery({
+    queryKey: ['entries', 'search', params],
+    queryFn: () => api.searchEntries(params!),
+    enabled: !!params?.q,
+  });
+}
+
+// Tags
+export function useTags() {
+  return useQuery({
+    queryKey: ['tags'],
+    queryFn: api.getTags,
+  });
+}
+
+export function useAddTagToEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ entryId, tagName }: { entryId: number; tagName: string }) =>
+      api.addTagToEntry(entryId, tagName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      toast.success('标签已添加');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '添加标签失败');
+    },
+  });
+}
+
+export function useRemoveTagFromEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ entryId, tagId }: { entryId: number; tagId: string }) =>
+      api.removeTagFromEntry(entryId, tagId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entries'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+    },
+  });
+}
+
+// Share
+export function useShareEntry() {
+  return useMutation({
+    mutationFn: api.shareEntry,
+    onError: (error: Error) => {
+      toast.error(error.message || '分享失败');
+    },
+  });
+}
+
+export function useUnshareEntry() {
+  return useMutation({
+    mutationFn: api.unshareEntry,
+    onSuccess: () => {
+      toast.success('已取消分享');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || '操作失败');
+    },
+  });
+}
+
 // AI Features - Full content with caching
 export function useFullContent(entryId: number, enabled: boolean = false) {
   return useQuery({

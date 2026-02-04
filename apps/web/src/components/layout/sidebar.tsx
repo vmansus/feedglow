@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@feedglow/ui';
-import { useFeeds, useCategories } from '@/hooks';
+import { useFeeds, useCategories, useMarkFeedAsRead, useMarkCategoryAsRead, useMarkAllAsRead } from '@/hooks';
 import { useAuth } from '@/contexts/auth-context';
 import { useCommandPalette } from '@/components/ui/command-palette';
+import { useContextMenu } from '@/components/ui/context-menu';
 import { 
   Newspaper, 
   Star, 
@@ -20,9 +21,14 @@ import {
   BarChart3,
   Network,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  CheckCircle,
+  RefreshCw,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { useLayout } from '@/contexts/layout-context';
+import { refreshFeed } from '@/lib/api';
 
 // Generate consistent color from string
 function stringToColor(str: string): string {
@@ -49,9 +55,47 @@ export function Sidebar() {
   const { categories } = useCategories();
   const { user, logout } = useAuth();
   const { open: openCommandPalette } = useCommandPalette();
+  const { showMenu } = useContextMenu();
   const { sidebarCollapsed, toggleSidebar, fullscreen } = useLayout();
+  
+  const markFeedAsRead = useMarkFeedAsRead();
+  const markCategoryAsRead = useMarkCategoryAsRead();
+  const markAllAsRead = useMarkAllAsRead();
 
   const totalUnread = feeds?.reduce((acc, feed) => acc + (feed.unreadCount || 0), 0) || 0;
+
+  // Context menu handlers
+  const handleFeedContextMenu = (e: React.MouseEvent, feedId: number, feedTitle: string, feedUrl?: string) => {
+    showMenu(e, [
+      {
+        label: '全部标记为已读',
+        icon: <CheckCircle className="w-4 h-4" />,
+        onClick: () => markFeedAsRead.mutate({ feedId }),
+      },
+      {
+        label: '刷新',
+        icon: <RefreshCw className="w-4 h-4" />,
+        onClick: () => refreshFeed(feedId),
+      },
+      { divider: true, label: '', onClick: () => {} },
+      {
+        label: '访问网站',
+        icon: <ExternalLink className="w-4 h-4" />,
+        onClick: () => feedUrl && window.open(feedUrl, '_blank'),
+        disabled: !feedUrl,
+      },
+    ]);
+  };
+
+  const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: number) => {
+    showMenu(e, [
+      {
+        label: '标记分类为已读',
+        icon: <CheckCircle className="w-4 h-4" />,
+        onClick: () => markCategoryAsRead.mutate({ categoryId }),
+      },
+    ]);
+  };
 
   // Hide sidebar completely in fullscreen mode
   if (fullscreen) {
@@ -163,6 +207,7 @@ export function Sidebar() {
                 count={category.unreadCount}
                 active={pathname === `/category/${category.id}`}
                 collapsed={sidebarCollapsed}
+                onContextMenu={(e) => handleCategoryContextMenu(e, category.id)}
               />
             ))}
           </div>
@@ -196,6 +241,7 @@ export function Sidebar() {
               active={pathname === `/feed/${feed.id}`}
               hasNew={Boolean(feed.unreadCount && feed.unreadCount > 0)}
               collapsed={sidebarCollapsed}
+              onContextMenu={(e) => handleFeedContextMenu(e, feed.id, feed.title, feed.siteUrl)}
             />
           ))}
         </div>
@@ -293,6 +339,7 @@ function FeedItem({
   active,
   hasNew,
   collapsed,
+  onContextMenu,
 }: {
   href: string;
   icon: React.ReactNode;
@@ -301,6 +348,7 @@ function FeedItem({
   active?: boolean;
   hasNew?: boolean;
   collapsed?: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   return (
     <Link
@@ -313,6 +361,7 @@ function FeedItem({
           : "hover:bg-[rgb(var(--bg-hover))]"
       )}
       title={collapsed ? title : undefined}
+      onContextMenu={onContextMenu}
     >
       <div className="flex-shrink-0">{icon}</div>
       {!collapsed && (

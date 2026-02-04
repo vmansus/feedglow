@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { AuthProvider } from '@/contexts/auth-context';
 import { LayoutProvider } from '@/contexts/layout-context';
+import { ContextMenuProvider } from '@/components/ui/context-menu';
 import { Toaster } from 'react-hot-toast';
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -28,14 +29,16 @@ export function Providers({ children }: { children: ReactNode }) {
       <ThemeProvider>
         <AuthProvider>
           <LayoutProvider>
-            {children}
-            <Toaster
-              position="bottom-right"
-              toastOptions={{
-                className: 'dark:bg-gray-800 dark:text-white',
-                duration: 3000,
-              }}
-            />
+            <ContextMenuProvider>
+              {children}
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  className: 'dark:bg-gray-800 dark:text-white',
+                  duration: 3000,
+                }}
+              />
+            </ContextMenuProvider>
           </LayoutProvider>
         </AuthProvider>
       </ThemeProvider>

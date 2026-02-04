@@ -137,6 +137,112 @@ export async function updateEntriesStatus(
   });
 }
 
+// ============ Batch Mark Read ============
+
+export async function markFeedAsRead(feedId: number, before?: string): Promise<void> {
+  await request(`/api/feeds/${feedId}/mark-read`, {
+    method: 'POST',
+    body: JSON.stringify({ before }),
+  });
+}
+
+export async function markCategoryAsRead(categoryId: number, before?: string): Promise<void> {
+  await request(`/api/categories/${categoryId}/mark-read`, {
+    method: 'POST',
+    body: JSON.stringify({ before }),
+  });
+}
+
+export async function markAllAsRead(): Promise<void> {
+  await request('/api/mark-all-read', { method: 'POST' });
+}
+
+// ============ Search ============
+
+export interface SearchParams {
+  q: string;
+  feedId?: number;
+  categoryId?: number;
+  status?: 'read' | 'unread';
+  starred?: boolean;
+  before?: string;
+  after?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function searchEntries(params: SearchParams): Promise<EntriesResponse> {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      searchParams.append(key, String(value));
+    }
+  });
+  return request<EntriesResponse>(`/api/entries/search?${searchParams.toString()}`);
+}
+
+// ============ Tags ============
+
+export interface Tag {
+  id: string;
+  name: string;
+  color?: string;
+  entryCount?: number;
+  isAI?: boolean;
+}
+
+export async function getTags(): Promise<Tag[]> {
+  return request<Tag[]>('/api/tags');
+}
+
+export async function createTag(name: string, color?: string): Promise<Tag> {
+  return request<Tag>('/api/tags', {
+    method: 'POST',
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+export async function updateTag(id: string, data: { name?: string; color?: string }): Promise<Tag> {
+  return request<Tag>(`/api/tags/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTag(id: string): Promise<void> {
+  await request(`/api/tags/${id}`, { method: 'DELETE' });
+}
+
+export async function addTagToEntry(entryId: number, tagName: string): Promise<void> {
+  await request(`/api/entries/${entryId}/tags`, {
+    method: 'POST',
+    body: JSON.stringify({ tagName }),
+  });
+}
+
+export async function removeTagFromEntry(entryId: number, tagId: string): Promise<void> {
+  await request(`/api/entries/${entryId}/tags/${tagId}`, { method: 'DELETE' });
+}
+
+// ============ Share ============
+
+export interface ShareResult {
+  code: string;
+  url: string;
+}
+
+export async function shareEntry(entryId: number): Promise<ShareResult> {
+  return request<ShareResult>(`/api/entries/${entryId}/share`, { method: 'POST' });
+}
+
+export async function unshareEntry(entryId: number): Promise<void> {
+  await request(`/api/entries/${entryId}/share`, { method: 'DELETE' });
+}
+
+export async function getSharedEntry(code: string): Promise<Entry> {
+  return request<Entry>(`/api/shared/${code}`);
+}
+
 // ============ AI Features ============
 
 export async function summarizeEntry(id: number): Promise<SummaryResult> {
