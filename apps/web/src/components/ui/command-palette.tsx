@@ -31,7 +31,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     }
   }, [isOpen]);
 
-  // Search debounced
+  // Search debounced - use full-text search API
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
@@ -41,11 +41,19 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const data = await api.getEntries({ search: query, limit: 10 });
+        // Use searchEntries for full-text search, fallback to getEntries
+        const data = await api.searchEntries({ q: query, limit: 10 });
         setResults(data.entries || []);
         setSelectedIndex(0);
       } catch {
-        setResults([]);
+        // Fallback to basic search
+        try {
+          const data = await api.getEntries({ search: query, limit: 10 });
+          setResults(data.entries || []);
+          setSelectedIndex(0);
+        } catch {
+          setResults([]);
+        }
       } finally {
         setIsSearching(false);
       }
@@ -98,74 +106,74 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             transition={{ duration: 0.15 }}
             className="fixed top-[20%] left-1/2 -translate-x-1/2 z-50 w-full max-w-xl"
           >
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-[rgb(var(--bg-elevated))] rounded-xl shadow-2xl border border-default overflow-hidden">
               {/* Search Input */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <Search className="w-5 h-5 text-gray-400" />
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-default">
+                <Search className="w-5 h-5 text-muted" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search articles, feeds, or type a command..."
-                  className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400"
+                  placeholder="搜索文章、Feed 或输入命令..."
+                  className="flex-1 bg-transparent outline-none text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-muted))]"
                 />
                 {query && (
-                  <button onClick={() => setQuery('')} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                    <X className="w-4 h-4 text-gray-400" />
+                  <button onClick={() => setQuery('')} className="p-1 hover:bg-[rgb(var(--bg-hover))] rounded">
+                    <X className="w-4 h-4 text-muted" />
                   </button>
                 )}
-                <kbd className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded text-gray-500">ESC</kbd>
+                <kbd className="px-2 py-1 text-xs bg-[rgb(var(--bg-hover))] rounded text-muted">ESC</kbd>
               </div>
 
               {/* Results */}
               <div className="max-h-80 overflow-y-auto">
                 {isSearching && (
-                  <div className="p-4 text-center text-gray-500">
-                    <span className="animate-pulse">Searching...</span>
+                  <div className="p-4 text-center text-muted">
+                    <span className="animate-pulse">搜索中...</span>
                   </div>
                 )}
 
                 {!query && !isSearching && (
                   <div className="p-2">
-                    <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Quick Actions</div>
+                    <div className="px-3 py-2 text-xs font-medium text-muted uppercase">快捷操作</div>
                     {quickActions.map((action, i) => (
                       <button
                         key={action.label}
                         onClick={action.action}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                          i === selectedIndex ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          i === selectedIndex ? 'bg-orange-500/10 text-orange-500' : 'hover:bg-[rgb(var(--bg-hover))]'
                         }`}
                       >
-                        <action.icon className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900 dark:text-white">{action.label}</span>
+                        <action.icon className="w-4 h-4 text-muted" />
+                        <span className="text-[rgb(var(--text-primary))]">{action.label}</span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 {query && !isSearching && results.length === 0 && (
-                  <div className="p-8 text-center text-gray-500">
+                  <div className="p-8 text-center text-muted">
                     <span className="text-3xl mb-2 block">🔍</span>
-                    <p>No results found</p>
+                    <p>没有找到结果</p>
                   </div>
                 )}
 
                 {results.length > 0 && (
                   <div className="p-2">
-                    <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Articles</div>
+                    <div className="px-3 py-2 text-xs font-medium text-muted uppercase">文章</div>
                     {results.map((entry, i) => (
                       <button
                         key={entry.id}
                         onClick={() => handleSelect(entry)}
                         className={`w-full flex items-start gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                          i === selectedIndex ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          i === selectedIndex ? 'bg-orange-500/10' : 'hover:bg-[rgb(var(--bg-hover))]'
                         }`}
                       >
-                        <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <FileText className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{entry.title}</p>
-                          <p className="text-xs text-gray-500 truncate">{entry.feedTitle}</p>
+                          <p className="text-sm font-medium text-[rgb(var(--text-primary))] truncate">{entry.title}</p>
+                          <p className="text-xs text-muted truncate">{entry.feedTitle}</p>
                         </div>
                         {entry.starred && <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />}
                       </button>
@@ -175,10 +183,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-500 flex items-center gap-4">
-                <span><kbd className="px-1 bg-gray-200 dark:bg-gray-700 rounded">↑↓</kbd> navigate</span>
-                <span><kbd className="px-1 bg-gray-200 dark:bg-gray-700 rounded">↵</kbd> select</span>
-                <span><kbd className="px-1 bg-gray-200 dark:bg-gray-700 rounded">esc</kbd> close</span>
+              <div className="px-4 py-2 bg-[rgb(var(--bg-base))] text-xs text-muted flex items-center gap-4">
+                <span><kbd className="px-1 bg-[rgb(var(--bg-hover))] rounded">↑↓</kbd> 导航</span>
+                <span><kbd className="px-1 bg-[rgb(var(--bg-hover))] rounded">↵</kbd> 选择</span>
+                <span><kbd className="px-1 bg-[rgb(var(--bg-hover))] rounded">esc</kbd> 关闭</span>
               </div>
             </div>
           </motion.div>

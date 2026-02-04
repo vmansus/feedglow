@@ -13,14 +13,17 @@ import {
   MessageCircle,
   Maximize2,
   Minimize2,
-  FileText
+  FileText,
+  Share2
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize, useFullContent } from '@/hooks';
+import { useToggleBookmark, useSummarize, useFullContent, useShareEntry, useUnshareEntry, useTags, useAddTagToEntry, useRemoveTagFromEntry } from '@/hooks';
 import { useLayout } from '@/contexts/layout-context';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
 import { BilingualContent } from './bilingual-content';
+import { ShareModal } from './share-modal';
+import { TagInput } from './tag-input';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -32,12 +35,18 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
   const [showChat, setShowChat] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [fetchFullEnabled, setFetchFullEnabled] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
   const fullContentQuery = useFullContent(entry.id, fetchFullEnabled);
+  const shareEntry = useShareEntry();
+  const unshareEntry = useUnshareEntry();
+  const { data: allTags } = useTags();
+  const addTag = useAddTagToEntry();
+  const removeTag = useRemoveTagFromEntry();
   const readerSettings = useReaderSettings();
   const { fullscreen, toggleFullscreen } = useLayout();
 
@@ -118,6 +127,13 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
+          <button
+            onClick={() => setShowShare(true)}
+            className="p-2 rounded-lg text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+            title="分享"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
           <button
             onClick={toggleFullscreen}
             className={cn(
@@ -280,26 +296,35 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             />
           </div>
 
-          {/* Tags */}
-          {entry.tags && entry.tags.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-default">
-              <div className="flex flex-wrap gap-2">
-                {entry.tags.map((tag) => (
-                  <span 
-                    key={tag} 
-                    className="px-2 py-1 text-xs bg-[rgb(var(--bg-hover))] text-muted rounded-lg"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Tags Section */}
+          <div className="mt-8 pt-6 border-t border-default">
+            <p className="text-xs text-muted mb-2">标签</p>
+            <TagInput
+              tags={(entry.tags || []).map(t => ({ name: t, isAI: false }))}
+              suggestions={allTags?.map(t => ({ id: t.id, name: t.name })) || []}
+              onAdd={(name) => addTag.mutate({ entryId: entry.id, tagName: name })}
+              onRemove={(tag) => tag.id && removeTag.mutate({ entryId: entry.id, tagId: tag.id })}
+            />
+          </div>
         </article>
       </div>
 
       {/* Chat Panel */}
       <ChatPanel entry={entry} isOpen={showChat} onClose={() => setShowChat(false)} />
+      
+      {/* Share Modal */}
+      <ShareModal
+        entry={entry}
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        onShare={async () => {
+          const result = await shareEntry.mutateAsync(entry.id);
+          return result.url;
+        }}
+        onUnshare={async () => {
+          await unshareEntry.mutateAsync(entry.id);
+        }}
+      />
     </motion.div>
   );
 }

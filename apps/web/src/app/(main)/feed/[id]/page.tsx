@@ -4,32 +4,48 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { useFeed, useDeleteFeed, useRefreshFeed, useEntries, useKeyboardNavigation, useToggleBookmark, useMarkAsRead, useMarkAsUnread } from '@/hooks';
+import { ArrowLeft, RefreshCw, CheckCircle } from 'lucide-react';
+import { useFeed, useDeleteFeed, useRefreshFeed, useEntries, useKeyboardNavigation, useToggleBookmark, useMarkAsRead, useMarkAsUnread, useMarkFeedAsRead } from '@/hooks';
 import { EntryList } from '@/components/entry/entry-list';
 import { EntryReader } from '@/components/entry/entry-reader';
 import { EntryListSkeleton, FeedHeaderSkeleton } from '@/components/ui/skeleton';
 import { KeyboardHelp } from '@/components/ui/keyboard-help';
 import { ResizableLayout } from '@/components/layout/resizable-layout';
+import { EntryFiltersBar, useEntryFilters } from '@/components/entry/entry-filters';
 import type { Entry } from '@feedglow/shared';
 
 export default function FeedDetailPage() {
   const params = useParams();
   const router = useRouter();
   const feedId = Number(params.id);
+  const { filters, updateFilters } = useEntryFilters();
   
   const { data: feed, isLoading: feedLoading } = useFeed(feedId);
-  const { data: entriesData, isLoading: entriesLoading } = useEntries({ feedId });
+  const { data: entriesData, isLoading: entriesLoading } = useEntries({ 
+    feedId,
+    status: filters.status === 'all' ? undefined : filters.status,
+    starred: filters.starred || undefined,
+  });
   const refreshFeed = useRefreshFeed();
   const deleteFeed = useDeleteFeed();
   const toggleBookmark = useToggleBookmark();
   const markAsRead = useMarkAsRead();
   const markAsUnread = useMarkAsUnread();
+  const markFeedAsRead = useMarkFeedAsRead();
   
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const entries = entriesData?.entries || [];
+  
+  // Apply client-side sorting
+  const sortedEntries = [...entries].sort((a, b) => {
+    const aDate = new Date(filters.order === 'published_at' ? a.publishedAt : a.createdAt || a.publishedAt);
+    const bDate = new Date(filters.order === 'published_at' ? b.publishedAt : b.createdAt || b.publishedAt);
+    return filters.direction === 'desc' ? bDate.getTime() - aDate.getTime() : aDate.getTime() - bDate.getTime();
+  });
+  
+  const unreadCount = entries.filter(e => e.status === 'unread').length;
 
   const handleRefresh = () => {
     refreshFeed.mutate(feedId);
@@ -44,7 +60,7 @@ export default function FeedDetailPage() {
   };
 
   const { showHelp, setShowHelp, shortcuts } = useKeyboardNavigation({
-    entries,
+    entries: sortedEntries,
     selectedId: selectedEntry?.id,
     onSelect: setSelectedEntry,
     onOpen: setSelectedEntry,
@@ -61,7 +77,7 @@ export default function FeedDetailPage() {
       <div className="flex items-center justify-center h-full">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
           <span className="text-6xl mb-4 block">📡</span>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Feed not found</p>
+          <p className="text-muted mb-4">Feed not found</p>
           <Link href="/feeds" className="text-orange-500 hover:underline">
             ← Back to feeds
           </Link>
@@ -73,47 +89,61 @@ export default function FeedDetailPage() {
   const listHeader = feedLoading ? (
     <FeedHeaderSkeleton />
   ) : (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-default">
-      {/* Clean minimal header */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/feeds"
-          className="p-1.5 hover:bg-[rgb(var(--bg-hover))] rounded-lg transition-colors flex-shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4 text-muted" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-semibold truncate text-[rgb(var(--text-primary))]">{feed?.title}</h1>
-          <p className="text-xs text-muted">
-            {feed?.unreadCount || 0} unread
-          </p>
+    <div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-default">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/feeds"
+            className="p-1.5 hover:bg-[rgb(var(--bg-hover))] rounded-lg transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-muted" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-semibold truncate text-[rgb(var(--text-primary))]">{feed?.title}</h1>
+            <p className="text-xs text-muted">
+              {unreadCount} unread
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <button
+                onClick={() => markFeedAsRead.mutate({ feedId })}
+                disabled={markFeedAsRead.isPending}
+                className="p-2 rounded-lg text-muted hover:text-orange-500 hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                title="全部已读"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshFeed.isPending}
+              className="p-2 rounded-lg text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+              title="刷新"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
-        {/* Subtle refresh - only shows on hover or when loading */}
-        <button
-          onClick={handleRefresh}
-          disabled={refreshFeed.isPending}
-          className={`p-2 rounded-lg transition-all ${
-            refreshFeed.isPending 
-              ? 'text-orange-500' 
-              : 'text-transparent hover:text-muted'
-          }`}
-          title="Refresh (r)"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshFeed.isPending ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-    </motion.div>
+      </motion.div>
+      <EntryFiltersBar
+        filters={filters}
+        onChange={updateFilters}
+        totalCount={entriesData?.total}
+        unreadCount={unreadCount}
+      />
+    </div>
   );
 
   const listContent = entriesLoading ? (
     <EntryListSkeleton count={10} />
-  ) : entries.length > 0 ? (
-    <EntryList entries={entries} selectedId={selectedEntry?.id} onSelect={setSelectedEntry} />
+  ) : sortedEntries.length > 0 ? (
+    <EntryList entries={sortedEntries} selectedId={selectedEntry?.id} onSelect={setSelectedEntry} />
   ) : (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center h-32 text-gray-500"
+      className="flex flex-col items-center justify-center h-32 text-muted"
     >
       <span className="text-3xl mb-2">📭</span>
       <p>No entries yet</p>
@@ -136,13 +166,13 @@ export default function FeedDetailPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="flex items-center justify-center h-full text-gray-400"
+          className="flex items-center justify-center h-full text-muted"
         >
           <div className="text-center">
             <span className="text-6xl mb-4 block">📖</span>
             <p className="mb-2">Select an article to read</p>
-            <p className="text-sm text-gray-500">
-              Press <kbd className="px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded">?</kbd> for shortcuts
+            <p className="text-sm text-muted">
+              Press <kbd className="px-1.5 py-0.5 text-xs bg-[rgb(var(--bg-hover))] rounded">?</kbd> for shortcuts
             </p>
           </div>
         </motion.div>
@@ -173,16 +203,16 @@ export default function FeedDetailPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4"
+              className="bg-[rgb(var(--bg-elevated))] rounded-lg p-6 max-w-md mx-4"
             >
-              <h3 className="text-lg font-semibold mb-2 dark:text-white">Delete Feed?</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <h3 className="text-lg font-semibold mb-2">Delete Feed?</h3>
+              <p className="text-muted mb-4">
                 Are you sure you want to delete "{feed?.title}"? This will also remove all its entries.
               </p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm text-muted hover:bg-[rgb(var(--bg-hover))] rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
