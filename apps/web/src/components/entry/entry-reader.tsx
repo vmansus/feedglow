@@ -238,14 +238,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           </div>
 
           {/* Main Content - with optional bilingual translation */}
-          <div
-            style={getReaderStyles(readerSettings.settings)}
-            className={cn(
-              "prose prose-sm dark:prose-invert max-w-none",
-              "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
-              "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary"
-            )}
-          >
+          <div style={getReaderStyles(readerSettings.settings)}>
             <BilingualContent 
               content={entry.content}
               entryId={entry.id}

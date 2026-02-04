@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useCallback } from 'react';
 import { translateParagraphs } from '@/lib/api';
 
 interface BilingualContentProps {
@@ -11,211 +10,184 @@ interface BilingualContentProps {
   language?: string;
 }
 
-interface Paragraph {
-  text: string;
-  translation: string | null;
-  status: 'pending' | 'loading' | 'done' | 'error';
-}
-
-// Parse HTML content into paragraphs
-function extractParagraphs(html: string): string[] {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  
-  const paragraphs: string[] = [];
-  const blocks = div.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote');
-  
-  blocks.forEach((block) => {
-    const text = block.textContent?.trim();
-    if (text && text.length > 10) {
-      paragraphs.push(text);
-    }
-  });
-  
-  // If no block elements found, split by double newlines
-  if (paragraphs.length === 0) {
-    const text = div.textContent || '';
-    text.split(/\n\s*\n/).forEach((p) => {
-      const trimmed = p.trim();
-      if (trimmed.length > 10) {
-        paragraphs.push(trimmed);
-      }
-    });
-  }
-  
-  return paragraphs;
-}
-
 // Cache key for localStorage
 function getCacheKey(entryId: number, lang: string) {
-  return `feedglow_translation_${entryId}_${lang}`;
+  return `feedglow_trans_${entryId}_${lang}`;
+}
+
+// Load cached translations
+function loadCache(entryId: number, lang: string): Record<string, string> {
+  try {
+    const cached = localStorage.getItem(getCacheKey(entryId, lang));
+    return cached ? JSON.parse(cached) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Save to cache
+function saveCache(entryId: number, lang: string, cache: Record<string, string>) {
+  try {
+    localStorage.setItem(getCacheKey(entryId, lang), JSON.stringify(cache));
+  } catch {
+    // Storage full, ignore
+  }
 }
 
 export function BilingualContent({ content, entryId, enabled, language = 'zh-CN' }: BilingualContentProps) {
-  const [paragraphs, setParagraphs] = useState<Paragraph[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const pendingBatch = useRef<Set<number>>(new Set());
+  const translationCache = useRef<Record<string, string>>({});
+  const pendingTexts = useRef<Map<Element, string>>(new Map());
   const batchTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize paragraphs from content
+  // Initialize and setup observer
   useEffect(() => {
-    const texts = extractParagraphs(content);
-    
-    // Try to load from cache
-    const cached = localStorage.getItem(getCacheKey(entryId, language));
-    let cachedTranslations: Record<number, string> = {};
-    if (cached) {
-      try {
-        cachedTranslations = JSON.parse(cached);
-      } catch {
-        // Invalid cache, ignore
-      }
-    }
-    
-    setParagraphs(texts.map((text, i) => ({
-      text,
-      translation: cachedTranslations[i] || null,
-      status: cachedTranslations[i] ? 'done' : 'pending',
-    })));
-  }, [content, entryId, language]);
+    if (!containerRef.current) return;
 
-  // Batch translate function
-  const translateBatch = useCallback(async (indices: number[]) => {
-    if (indices.length === 0) return;
-    
-    // Mark as loading
-    setParagraphs((prev) => prev.map((p, i) => 
-      indices.includes(i) ? { ...p, status: 'loading' as const } : p
-    ));
+    // Load cache
+    translationCache.current = loadCache(entryId, language);
 
-    try {
-      const textsToTranslate = indices.map((i) => paragraphs[i]?.text).filter(Boolean);
-      const translations = await translateParagraphs(textsToTranslate, language);
-      
-      setParagraphs((prev) => {
-        const updated = [...prev];
-        indices.forEach((idx, i) => {
-          if (updated[idx]) {
-            updated[idx] = {
-              ...updated[idx],
-              translation: translations[i] || '[翻译失败]',
-              status: 'done',
-            };
-          }
-        });
-        
-        // Save to cache
-        const cache: Record<number, string> = {};
-        updated.forEach((p, i) => {
-          if (p.translation) cache[i] = p.translation;
-        });
-        localStorage.setItem(getCacheKey(entryId, language), JSON.stringify(cache));
-        
-        return updated;
-      });
-    } catch {
-      setParagraphs((prev) => prev.map((p, i) => 
-        indices.includes(i) ? { ...p, status: 'error' as const, translation: '[翻译失败]' } : p
-      ));
-    }
-  }, [paragraphs, entryId, language]);
+    // Inject original HTML
+    containerRef.current.innerHTML = content;
 
-  // Schedule batch translation
-  const scheduleBatch = useCallback((index: number) => {
-    pendingBatch.current.add(index);
-    
-    if (batchTimeout.current) {
-      clearTimeout(batchTimeout.current);
-    }
-    
-    batchTimeout.current = setTimeout(() => {
-      const indices = Array.from(pendingBatch.current);
-      pendingBatch.current.clear();
-      translateBatch(indices);
-    }, 100); // 100ms debounce
-  }, [translateBatch]);
-
-  // Setup Intersection Observer
-  useEffect(() => {
     if (!enabled) return;
 
+    // Find all block elements that should be translated
+    const blocks = containerRef.current.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th');
+    
+    blocks.forEach((block) => {
+      const text = block.textContent?.trim();
+      if (!text || text.length < 15) return; // Skip short text (dates, labels)
+      
+      // Create translation container
+      const transDiv = document.createElement('div');
+      transDiv.className = 'feedglow-translation';
+      transDiv.style.cssText = `
+        margin-top: 0.5rem;
+        margin-bottom: 1rem;
+        padding-left: 0.75rem;
+        border-left: 2px solid rgba(249, 115, 22, 0.4);
+        color: rgba(249, 115, 22, 0.9);
+        font-size: 0.875rem;
+        line-height: 1.6;
+      `;
+      
+      // Check cache first
+      if (translationCache.current[text]) {
+        transDiv.textContent = translationCache.current[text];
+      } else {
+        transDiv.innerHTML = `<span style="opacity: 0.5">滚动到此处开始翻译...</span>`;
+        transDiv.setAttribute('data-pending', 'true');
+        transDiv.setAttribute('data-text', text);
+      }
+      
+      // Insert after the block
+      block.parentNode?.insertBefore(transDiv, block.nextSibling);
+    });
+
+    // Setup Intersection Observer for lazy loading
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute('data-index') || '0');
-            const para = paragraphs[index];
-            if (para && para.status === 'pending') {
-              scheduleBatch(index);
+            const el = entry.target as HTMLElement;
+            if (el.getAttribute('data-pending') === 'true') {
+              const text = el.getAttribute('data-text');
+              if (text) {
+                pendingTexts.current.set(el, text);
+                scheduleBatch();
+              }
             }
           }
         });
       },
-      { rootMargin: '100px', threshold: 0.1 }
+      { rootMargin: '200px', threshold: 0.1 }
     );
 
-    // Observe all paragraph elements
-    paragraphRefs.current.forEach((el) => {
+    // Observe all pending translation divs
+    containerRef.current.querySelectorAll('.feedglow-translation[data-pending="true"]').forEach((el) => {
       observerRef.current?.observe(el);
     });
 
     return () => {
       observerRef.current?.disconnect();
+      if (batchTimeout.current) clearTimeout(batchTimeout.current);
     };
-  }, [enabled, paragraphs, scheduleBatch]);
+  }, [content, entryId, enabled, language]);
 
-  // Register paragraph ref
-  const setRef = useCallback((index: number, el: HTMLDivElement | null) => {
-    if (el) {
-      paragraphRefs.current.set(index, el);
-      observerRef.current?.observe(el);
-    } else {
-      paragraphRefs.current.delete(index);
+  // Batch translate
+  const scheduleBatch = useCallback(() => {
+    if (batchTimeout.current) clearTimeout(batchTimeout.current);
+    
+    batchTimeout.current = setTimeout(async () => {
+      const pending = Array.from(pendingTexts.current.entries());
+      if (pending.length === 0) return;
+      
+      // Take up to 5 at a time
+      const batch = pending.slice(0, 5);
+      const texts = batch.map(([, text]) => text);
+      const elements = batch.map(([el]) => el);
+      
+      // Mark as loading
+      elements.forEach((el) => {
+        (el as HTMLElement).innerHTML = `
+          <span style="display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.5">
+            <span style="width: 12px; height: 12px; border: 2px solid rgba(249,115,22,0.3); border-top-color: rgb(249,115,22); border-radius: 50%; animation: spin 1s linear infinite"></span>
+            翻译中...
+          </span>
+        `;
+      });
+      
+      // Remove from pending
+      batch.forEach(([el]) => pendingTexts.current.delete(el));
+      
+      try {
+        const translations = await translateParagraphs(texts, language);
+        
+        elements.forEach((el, i) => {
+          const htmlEl = el as HTMLElement;
+          htmlEl.textContent = translations[i] || '[翻译失败]';
+          htmlEl.removeAttribute('data-pending');
+          htmlEl.removeAttribute('data-text');
+          observerRef.current?.unobserve(el);
+          
+          // Cache it
+          translationCache.current[texts[i]] = translations[i];
+        });
+        
+        // Save cache
+        saveCache(entryId, language, translationCache.current);
+        
+        // Process remaining if any
+        if (pendingTexts.current.size > 0) {
+          scheduleBatch();
+        }
+      } catch {
+        elements.forEach((el) => {
+          (el as HTMLElement).textContent = '[翻译失败]';
+        });
+      }
+    }, 150);
+  }, [entryId, language]);
+
+  // Add CSS animation for spinner
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
+    const styleId = 'feedglow-trans-style';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+      document.head.appendChild(style);
     }
   }, []);
 
-  if (!enabled) {
-    return <div dangerouslySetInnerHTML={{ __html: content }} />;
-  }
-
   return (
-    <div className="space-y-6">
-      {paragraphs.map((para, i) => (
-        <div
-          key={i}
-          ref={(el) => setRef(i, el)}
-          data-index={i}
-          className="group"
-        >
-          {/* Original text */}
-          <p className="text-[rgb(var(--text-secondary))] leading-relaxed mb-2">
-            {para.text}
-          </p>
-          
-          {/* Translation */}
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="pl-3 border-l-2 border-orange-500/40"
-          >
-            {para.status === 'loading' ? (
-              <p className="text-orange-400/50 text-sm flex items-center gap-2">
-                <span className="w-3 h-3 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
-                翻译中...
-              </p>
-            ) : para.status === 'done' || para.status === 'error' ? (
-              <p className="text-orange-400/90 text-sm leading-relaxed">
-                {para.translation}
-              </p>
-            ) : (
-              <p className="text-muted text-sm opacity-50">
-                滚动到此处开始翻译...
-              </p>
-            )}
-          </motion.div>
-        </div>
-      ))}
-    </div>
+    <div 
+      ref={containerRef}
+      className="prose prose-sm dark:prose-invert max-w-none prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline prose-headings:text-[rgb(var(--text-primary))] prose-p:text-[rgb(var(--text-secondary))]"
+    />
   );
 }
