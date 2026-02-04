@@ -53,9 +53,15 @@ export interface SummaryResult {
   tokens: number;
 }
 
+export interface TranslationParagraph {
+  original: string;
+  translated: string;
+}
+
 export interface TranslationResult {
   title: string;
-  content: string;
+  translatedTitle: string;
+  paragraphs: TranslationParagraph[];
   summary?: string;
   tokens: number;
 }
@@ -165,14 +171,25 @@ export async function translateArticle(
 
   const content = stripHtml(entry.content).slice(0, 5000);
 
-  const prompt = `Translate to ${targetLanguage}. Return JSON only, no markdown.
+  // Split into paragraphs
+  const paragraphs = content
+    .split(/\n\s*\n|\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 10);
+
+  // Number each paragraph for structured translation
+  const numberedParagraphs = paragraphs
+    .map((p, i) => `[${i + 1}] ${p}`)
+    .join('\n\n');
+
+  const prompt = `Translate each numbered paragraph to ${targetLanguage}. Return JSON only, no markdown.
 
 Title: ${entry.title}
 
-Content:
-${content}
+${numberedParagraphs}
 
-{"title":"translated title","content":"translated content","summary":"one sentence summary in ${targetLanguage}"}`;
+Return format:
+{"title":"translated title","paragraphs":["translated paragraph 1","translated paragraph 2",...],"summary":"one sentence summary in ${targetLanguage}"}`;
 
   const result = await generateText({
     model,
@@ -183,16 +200,24 @@ ${content}
 
   try {
     const parsed = JSON.parse(extractJson(result.text));
+    const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
+      original,
+      translated: parsed.paragraphs?.[i] || '',
+    }));
+
     return {
-      title: parsed.title,
-      content: parsed.content,
+      title: entry.title,
+      translatedTitle: parsed.title,
+      paragraphs: translatedParagraphs,
       summary: parsed.summary,
       tokens: result.usage?.totalTokens || 0,
     };
   } catch {
+    // Fallback: return as single paragraph
     return {
       title: entry.title,
-      content: result.text,
+      translatedTitle: entry.title,
+      paragraphs: [{ original: content, translated: result.text }],
       tokens: result.usage?.totalTokens || 0,
     };
   }

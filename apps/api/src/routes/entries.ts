@@ -198,7 +198,6 @@ entries.post(
 
       return c.json({
         entryId: id,
-        originalTitle: entry.title,
         ...translation,
       });
     } catch (err) {
