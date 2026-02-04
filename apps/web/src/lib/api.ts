@@ -156,6 +156,70 @@ export async function translateEntry(
   });
 }
 
+// Streaming translation with SSE
+export interface TranslationChunk {
+  type: 'title' | 'batch' | 'done' | 'error';
+  data?: {
+    title?: string;
+    translatedTitle?: string;
+    startIndex?: number;
+    paragraphs?: Array<{ original: string; translated: string }>;
+  };
+  error?: string;
+}
+
+export function translateEntryStream(
+  id: number,
+  language: string = 'zh-CN',
+  onChunk: (chunk: TranslationChunk) => void
+): () => void {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.vmansus.top';
+  const authHeader = getAuthHeader();
+  const controller = new AbortController();
+  
+  fetch(`${API_BASE}/api/entries/${id}/translate/stream?language=${language}`, {
+    headers: authHeader,
+    signal: controller.signal,
+  }).then(async (response) => {
+    const reader = response.body?.getReader();
+    if (!reader) return;
+    
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let reading = true;
+    
+    while (reading) {
+      const { done, value } = await reader.read();
+      if (done) {
+        reading = false;
+        break;
+      }
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const chunk = JSON.parse(line.slice(6));
+            onChunk(chunk);
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+    }
+  }).catch((err) => {
+    if (err.name !== 'AbortError') {
+      onChunk({ type: 'error', error: err.message });
+    }
+  });
+  
+  // Return abort function
+  return () => controller.abort();
+}
+
 export async function generateTags(id: number): Promise<string[]> {
   const result = await request<{ tags: string[] }>(`/api/entries/${id}/tags`, {
     method: 'POST',

@@ -10,6 +10,7 @@ import { authMiddleware } from '../lib/auth.js';
 import {
   summarizeArticle,
   translateArticle,
+  translateArticleStream,
   generateTags,
   getAIConfigForUser,
 } from '../services/ai.js';
@@ -204,6 +205,37 @@ entries.post(
       const { message, code, status } = parseAIError(err);
       return c.json({ error: message, code }, status);
     }
+  }
+);
+
+// Stream translate entry (SSE)
+entries.get(
+  '/:id/translate/stream',
+  async (c) => {
+    const id = parseInt(c.req.param('id'));
+    const language = c.req.query('language') || 'zh-CN';
+    const user = c.get('user') as JWTPayload;
+
+    const client = getClient(c);
+    const entry = await client.getEntry(id);
+    const config = await getAIConfigForUser(user.userId);
+
+    // Set SSE headers
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+
+    return c.stream(async (stream) => {
+      try {
+        for await (const chunk of translateArticleStream(entry, language, config)) {
+          await stream.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        }
+        await stream.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      } catch (err) {
+        const error = err instanceof Error ? err.message : 'Translation failed';
+        await stream.write(`data: ${JSON.stringify({ type: 'error', error })}\n\n`);
+      }
+    });
   }
 );
 

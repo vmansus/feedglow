@@ -18,7 +18,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
+import { useToggleBookmark, useSummarize, useTranslate, useTranslateStream, useFetchFullContent } from '@/hooks';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
 
@@ -41,6 +41,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
   const translate = useTranslate();
+  const translateStream = useTranslateStream();
   const fetchFullContent = useFetchFullContent();
   const readerSettings = useReaderSettings();
 
@@ -51,11 +52,17 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     setReadProgress(0);
     fetchFullContent.reset();
     translate.reset();
+    translateStream.reset();
   }, [entry.id, entry.starred]);
 
-  // Get translation data
-  const translationData = translate.data || entry.translation;
+  // Get translation data - prefer streaming data if available
+  const streamParagraphs = translateStream.paragraphs;
+  const hasStreamTranslation = streamParagraphs.length > 0;
+  const translationData = hasStreamTranslation 
+    ? { paragraphs: streamParagraphs, translatedTitle: translateStream.translatedTitle }
+    : (translate.data || entry.translation);
   const hasTranslation = !!translationData?.paragraphs?.length;
+  const isTranslating = translateStream.isTranslating || translate.isPending;
 
   // Build inline bilingual content when translation is available
   const bilingualContent = useMemo(() => {
@@ -63,16 +70,27 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     
     const paragraphs = translationData!.paragraphs!;
     return paragraphs.map((para, i) => (
-      <div key={i} className="mb-6 group">
+      <motion.div 
+        key={i} 
+        className="mb-6 group"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: i * 0.05 }}
+      >
         {/* Original text */}
         <p className="text-secondary mb-2 leading-relaxed">
           {para.original}
         </p>
         {/* Translation */}
         <p className="text-orange-400/90 text-sm leading-relaxed pl-3 border-l-2 border-orange-500/40">
-          {para.translated}
+          {para.translated || (
+            <span className="inline-flex items-center gap-2 text-orange-400/50">
+              <span className="w-3 h-3 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+              翻译中...
+            </span>
+          )}
         </p>
-      </div>
+      </motion.div>
     ));
   }, [hasTranslation, translationMode, translationData]);
 
@@ -261,16 +279,25 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
             {/* Translation button with mode toggle */}
-            {!hasTranslation ? (
+            {!hasTranslation && !isTranslating ? (
               <button
-                onClick={() => translate.mutate({ id: entry.id, language: 'zh-CN' }, {
-                  onSuccess: () => setTranslationMode('inline'),
-                })}
-                disabled={translate.isPending}
+                onClick={() => {
+                  setTranslationMode('inline');
+                  translateStream.startTranslation(entry.id, 'zh-CN');
+                }}
+                disabled={isTranslating}
                 className="btn-subtle flex items-center gap-2"
               >
                 <Languages className="w-4 h-4" />
-                {translate.isPending ? '翻译中...' : '逐段翻译'}
+                逐段翻译
+              </button>
+            ) : isTranslating ? (
+              <button
+                disabled
+                className="btn-subtle flex items-center gap-2 bg-orange-500/10 text-orange-400"
+              >
+                <span className="w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+                翻译中... ({streamParagraphs.length} 段)
               </button>
             ) : (
               <div className="flex items-center gap-1">
@@ -321,15 +348,15 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
                     {translationData?.translatedTitle}
                   </h4>
                   <p className="text-sm text-muted mt-1">
-                    原文: {translationData?.title}
+                    原文: {entry.title}
                   </p>
                 </div>
 
                 {/* Summary */}
-                {translationData?.summary && (
+                {'summary' in (translationData || {}) && (translationData as any)?.summary && (
                   <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
                     <p className="text-sm text-[rgb(var(--text-primary))]">
-                      📝 {translationData.summary}
+                      📝 {(translationData as any).summary}
                     </p>
                   </div>
                 )}
