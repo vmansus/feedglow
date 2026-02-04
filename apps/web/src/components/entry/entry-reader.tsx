@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@feedglow/ui';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
   Star, 
@@ -13,12 +13,17 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  MessageCircle
+  MessageCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
 import { useToggleBookmark, useSummarize, useTranslate, useFetchFullContent } from '@/hooks';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
+
+// Translation display modes
+type TranslationMode = 'off' | 'inline' | 'panel';
 
 interface EntryReaderProps {
   entry: Entry;
@@ -26,7 +31,7 @@ interface EntryReaderProps {
 }
 
 export function EntryReader({ entry, onClose }: EntryReaderProps) {
-  const [showTranslation, setShowTranslation] = useState(false);
+  const [translationMode, setTranslationMode] = useState<TranslationMode>('off');
   const [showFullContent, setShowFullContent] = useState(false);
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
@@ -42,11 +47,34 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   useEffect(() => {
     setIsStarred(entry.starred);
     setShowFullContent(false);
-    setShowTranslation(false);
+    setTranslationMode('off');
     setReadProgress(0);
     fetchFullContent.reset();
     translate.reset();
   }, [entry.id, entry.starred]);
+
+  // Get translation data
+  const translationData = translate.data || entry.translation;
+  const hasTranslation = !!translationData?.paragraphs?.length;
+
+  // Build inline bilingual content when translation is available
+  const bilingualContent = useMemo(() => {
+    if (!hasTranslation || translationMode !== 'inline') return null;
+    
+    const paragraphs = translationData!.paragraphs!;
+    return paragraphs.map((para, i) => (
+      <div key={i} className="mb-6 group">
+        {/* Original text */}
+        <p className="text-secondary mb-2 leading-relaxed">
+          {para.original}
+        </p>
+        {/* Translation */}
+        <p className="text-orange-400/90 text-sm leading-relaxed pl-3 border-l-2 border-orange-500/40">
+          {para.translated}
+        </p>
+      </div>
+    ));
+  }, [hasTranslation, translationMode, translationData]);
 
   useEffect(() => {
     const content = contentRef.current;
@@ -232,16 +260,42 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
-            <button
-              onClick={() => translate.mutate({ id: entry.id, language: 'zh-CN' }, {
-                onSuccess: () => setShowTranslation(true),
-              })}
-              disabled={translate.isPending}
-              className="btn-subtle flex items-center gap-2"
-            >
-              <Languages className="w-4 h-4" />
-              {translate.isPending ? 'Translating...' : 'Translate'}
-            </button>
+            {/* Translation button with mode toggle */}
+            {!hasTranslation ? (
+              <button
+                onClick={() => translate.mutate({ id: entry.id, language: 'zh-CN' }, {
+                  onSuccess: () => setTranslationMode('inline'),
+                })}
+                disabled={translate.isPending}
+                className="btn-subtle flex items-center gap-2"
+              >
+                <Languages className="w-4 h-4" />
+                {translate.isPending ? '翻译中...' : '逐段翻译'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setTranslationMode(translationMode === 'inline' ? 'off' : 'inline')}
+                  className={cn(
+                    "btn-subtle flex items-center gap-2",
+                    translationMode === 'inline' && "bg-orange-500/20 text-orange-400 border-orange-500/40"
+                  )}
+                >
+                  {translationMode === 'inline' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {translationMode === 'inline' ? '隐藏译文' : '显示译文'}
+                </button>
+                <button
+                  onClick={() => setTranslationMode(translationMode === 'panel' ? 'off' : 'panel')}
+                  className={cn(
+                    "btn-subtle flex items-center gap-2",
+                    translationMode === 'panel' && "bg-orange-500/20 text-orange-400 border-orange-500/40"
+                  )}
+                >
+                  <Languages className="w-4 h-4" />
+                  摘要
+                </button>
+              </div>
+            )}
             <button
               onClick={() => fetchFullContent.mutate(entry.id)}
               disabled={fetchFullContent.isPending || !!fetchFullContent.data}
@@ -252,54 +306,36 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             </button>
           </div>
 
-          {/* Translation */}
-          {(entry.translation || translate.data) && (
-            <div className="mb-6">
-              <button
-                onClick={() => setShowTranslation(!showTranslation)}
-                className="flex items-center gap-1 text-sm text-orange-400 hover:text-orange-300 mb-2"
+          {/* Translation Panel (summary mode) */}
+          <AnimatePresence>
+            {translationMode === 'panel' && hasTranslation && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default space-y-4"
               >
-                {showTranslation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {showTranslation ? 'Hide translation' : 'Show translation'}
-              </button>
-              {showTranslation && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="p-4 rounded-xl bg-[rgb(var(--bg-hover))] border border-default space-y-4"
-                >
-                  {/* Translated Title */}
-                  <div>
-                    <h4 className="font-medium text-[rgb(var(--text-primary))]">
-                      {translate.data?.translatedTitle || entry.translation?.translatedTitle}
-                    </h4>
-                    <p className="text-sm text-muted mt-1">
-                      原文: {translate.data?.title || entry.translation?.title}
+                {/* Translated Title */}
+                <div>
+                  <h4 className="font-medium text-[rgb(var(--text-primary))]">
+                    {translationData?.translatedTitle}
+                  </h4>
+                  <p className="text-sm text-muted mt-1">
+                    原文: {translationData?.title}
+                  </p>
+                </div>
+
+                {/* Summary */}
+                {translationData?.summary && (
+                  <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <p className="text-sm text-[rgb(var(--text-primary))]">
+                      📝 {translationData.summary}
                     </p>
                   </div>
-
-                  {/* Summary */}
-                  {(translate.data?.summary || entry.translation?.summary) && (
-                    <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                      <p className="text-sm text-[rgb(var(--text-primary))]">
-                        📝 {translate.data?.summary || entry.translation?.summary}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Paragraph-by-paragraph comparison */}
-                  <div className="space-y-4">
-                    {(translate.data?.paragraphs || entry.translation?.paragraphs)?.map((para, i) => (
-                      <div key={i} className="border-l-2 border-orange-500/30 pl-3">
-                        <p className="text-[rgb(var(--text-primary))] mb-2">{para.translated}</p>
-                        <p className="text-sm text-muted">{para.original}</p>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          )}
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Full Article Content */}
           {fetchFullContent.data && (
@@ -326,17 +362,29 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
             </div>
           )}
 
-          {/* Main Content */}
-          <div
-            style={getReaderStyles(readerSettings.settings)}
-            className={cn(
-              "prose prose-sm dark:prose-invert max-w-none",
-              "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
-              "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary",
-              showFullContent && "hidden"
-            )}
-            dangerouslySetInnerHTML={{ __html: entry.content }}
-          />
+          {/* Main Content - shows bilingual when in inline mode */}
+          {translationMode === 'inline' && bilingualContent ? (
+            <div
+              style={getReaderStyles(readerSettings.settings)}
+              className={cn(
+                "max-w-none",
+                showFullContent && "hidden"
+              )}
+            >
+              {bilingualContent}
+            </div>
+          ) : (
+            <div
+              style={getReaderStyles(readerSettings.settings)}
+              className={cn(
+                "prose prose-sm dark:prose-invert max-w-none",
+                "prose-img:rounded-xl prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline",
+                "prose-headings:text-[rgb(var(--text-primary))] prose-p:text-secondary",
+                showFullContent && "hidden"
+              )}
+              dangerouslySetInnerHTML={{ __html: entry.content }}
+            />
+          )}
 
           {/* Tags */}
           {entry.tags && entry.tags.length > 0 && (

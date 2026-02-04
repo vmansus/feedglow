@@ -27,6 +27,20 @@ export interface Category {
 
 // ============ Entry Types ============
 
+export interface TranslationParagraph {
+  original: string;
+  translated: string;
+}
+
+export interface EntryTranslation {
+  language: string;
+  title: string;
+  translatedTitle?: string;
+  content: string;
+  summary?: string;
+  paragraphs?: TranslationParagraph[];
+}
+
 export interface Entry {
   id: number;
   feedId: number;
@@ -45,20 +59,6 @@ export interface Entry {
   keyPoints?: string[];
   translation?: EntryTranslation;
   tags?: string[];
-}
-
-export interface EntryTranslation {
-  language: string;
-  title: string;
-  translatedTitle?: string;
-  content: string;
-  paragraphs?: TranslationParagraph[];
-  summary?: string;
-}
-
-export interface TranslationParagraph {
-  original: string;
-  translated: string;
 }
 
 export interface EntriesResponse {
@@ -111,11 +111,6 @@ export interface SummaryResult {
   keyPoints: string[];
   readingTime: number;
   tokens: number;
-}
-
-export interface TranslationParagraph {
-  original: string;
-  translated: string;
 }
 
 export interface TranslationResult {
