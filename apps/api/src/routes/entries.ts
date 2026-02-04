@@ -129,6 +129,32 @@ entries.post('/:id/bookmark', async (c) => {
 
 // ============ AI Features ============
 
+// Parse AI errors into user-friendly messages
+function parseAIError(err: unknown): { message: string; code: string; status: number } {
+  const msg = err instanceof Error ? err.message : String(err);
+
+  if (msg.includes('Incorrect API key') || msg.includes('invalid_api_key')) {
+    return { message: 'API Key 无效，请在设置中检查你的 AI API Key', code: 'INVALID_API_KEY', status: 401 };
+  }
+  if (msg.includes('insufficient_quota') || msg.includes('exceeded your current quota')) {
+    return { message: 'API 额度已用完，请充值或更换 API Key', code: 'QUOTA_EXCEEDED', status: 402 };
+  }
+  if (msg.includes('model_not_found') || msg.includes('does not exist')) {
+    return { message: '模型不存在，请在设置中检查模型名称', code: 'MODEL_NOT_FOUND', status: 400 };
+  }
+  if (msg.includes('rate_limit') || msg.includes('Rate limit')) {
+    return { message: 'AI 请求太频繁，请稍后再试', code: 'RATE_LIMITED', status: 429 };
+  }
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+    return { message: 'AI 服务连接超时，请检查 API Base URL 是否正确', code: 'CONNECTION_ERROR', status: 504 };
+  }
+  if (msg.includes('No AI provider configured') || msg.includes('apiKey')) {
+    return { message: '尚未配置 AI，请先在设置中填写 API Key', code: 'NOT_CONFIGURED', status: 400 };
+  }
+
+  return { message: `AI 服务异常: ${msg}`, code: 'AI_ERROR', status: 500 };
+}
+
 // Generate AI summary for entry
 entries.post('/:id/summarize', async (c) => {
   const id = parseInt(c.req.param('id'));
@@ -136,13 +162,18 @@ entries.post('/:id/summarize', async (c) => {
   const client = getClient(c);
   const entry = await client.getEntry(id);
 
-  const config = await getAIConfigForUser(user.userId);
-  const summary = await summarizeArticle(entry, config);
+  try {
+    const config = await getAIConfigForUser(user.userId);
+    const summary = await summarizeArticle(entry, config);
 
-  return c.json({
-    entryId: id,
-    ...summary,
-  });
+    return c.json({
+      entryId: id,
+      ...summary,
+    });
+  } catch (err) {
+    const { message, code, status } = parseAIError(err);
+    return c.json({ error: message, code }, status);
+  }
 });
 
 // Translate entry
@@ -161,14 +192,19 @@ entries.post(
     const client = getClient(c);
     const entry = await client.getEntry(id);
 
-    const config = await getAIConfigForUser(user.userId);
-    const translation = await translateArticle(entry, language, config);
+    try {
+      const config = await getAIConfigForUser(user.userId);
+      const translation = await translateArticle(entry, language, config);
 
-    return c.json({
-      entryId: id,
-      originalTitle: entry.title,
-      ...translation,
-    });
+      return c.json({
+        entryId: id,
+        originalTitle: entry.title,
+        ...translation,
+      });
+    } catch (err) {
+      const { message, code, status } = parseAIError(err);
+      return c.json({ error: message, code }, status);
+    }
   }
 );
 
@@ -179,13 +215,18 @@ entries.post('/:id/tags', async (c) => {
   const client = getClient(c);
   const entry = await client.getEntry(id);
 
-  const config = await getAIConfigForUser(user.userId);
-  const tags = await generateTags(entry, config);
+  try {
+    const config = await getAIConfigForUser(user.userId);
+    const tags = await generateTags(entry, config);
 
-  return c.json({
-    entryId: id,
-    tags,
-  });
+    return c.json({
+      entryId: id,
+      tags,
+    });
+  } catch (err) {
+    const { message, code, status } = parseAIError(err);
+    return c.json({ error: message, code }, status);
+  }
 });
 
 // ============ Full-text Extraction ============
@@ -280,12 +321,17 @@ entries.post(
     // Index entry for future searches
     await indexEntry(entry, user.userId);
 
-    const result = await chatWithArticle(entry, message, user.userId, history);
+    try {
+      const result = await chatWithArticle(entry, message, user.userId, history);
 
-    return c.json({
-      entryId: id,
-      ...result,
-    });
+      return c.json({
+        entryId: id,
+        ...result,
+      });
+    } catch (err) {
+      const { message: errMsg, code, status } = parseAIError(err);
+      return c.json({ error: errMsg, code }, status);
+    }
   }
 );
 
