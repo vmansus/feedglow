@@ -172,39 +172,64 @@ export async function translateArticle(
 
   const content = stripHtml(entry.content).slice(0, 5000);
 
-  // Split into paragraphs
+  // Split into paragraphs - keep shorter ones too for better accuracy
   const paragraphs = content
     .split(/\n\s*\n|\n/)
     .map(p => p.trim())
-    .filter(p => p.length > 10);
+    .filter(p => p.length > 5);
 
-  // Number each paragraph for structured translation
-  const numberedParagraphs = paragraphs
-    .map((p, i) => `[${i + 1}] ${p}`)
-    .join('\n\n');
+  // Create paired format for AI to maintain alignment
+  const pairedFormat = paragraphs
+    .map((p, i) => `[P${i + 1}] ${p}`)
+    .join('\n');
 
-  const prompt = `Translate each numbered paragraph to ${targetLanguage}. Return JSON only, no markdown.
+  const prompt = `Translate this article to ${targetLanguage}. 
+
+CRITICAL: Return a JSON object with EXACTLY ${paragraphs.length} paragraphs in the "pairs" array, one for each [P#] marker.
+Do NOT merge, split, or skip any paragraphs. Translate each one individually.
 
 Title: ${entry.title}
 
-${numberedParagraphs}
+${pairedFormat}
 
-Return format:
-{"title":"translated title","paragraphs":["translated paragraph 1","translated paragraph 2",...],"summary":"one sentence summary in ${targetLanguage}"}`;
+Return format (JSON only, no markdown):
+{
+  "title": "translated title",
+  "summary": "one sentence summary in ${targetLanguage}",
+  "pairs": [
+    {"id": 1, "original": "original text 1", "translated": "translation 1"},
+    {"id": 2, "original": "original text 2", "translated": "translation 2"}
+  ]
+}`;
 
   const result = await generateText({
     model,
     prompt,
-    maxTokens: 4000,
+    maxTokens: 6000,
     abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
   });
 
   try {
     const parsed = JSON.parse(extractJson(result.text));
-    const translatedParagraphs: TranslationParagraph[] = paragraphs.map((original, i) => ({
-      original,
-      translated: parsed.paragraphs?.[i] || '',
-    }));
+    
+    // Use AI's paired output directly if available
+    let translatedParagraphs: TranslationParagraph[];
+    
+    if (parsed.pairs && Array.isArray(parsed.pairs)) {
+      // New format: AI returns paired original+translated
+      translatedParagraphs = parsed.pairs.map((pair: any, i: number) => ({
+        original: pair.original || paragraphs[i] || '',
+        translated: pair.translated || '',
+      }));
+    } else if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
+      // Fallback: old format with just translations array
+      translatedParagraphs = paragraphs.map((original, i) => ({
+        original,
+        translated: parsed.paragraphs?.[i] || '',
+      }));
+    } else {
+      throw new Error('Invalid response format');
+    }
 
     return {
       title: entry.title,
