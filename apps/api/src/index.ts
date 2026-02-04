@@ -23,6 +23,8 @@ import events from './routes/events.js';
 import discover from './routes/discover.js';
 import stats from './routes/stats.js';
 import knowledge from './routes/knowledge.js';
+import tags from './routes/tags.js';
+import shares from './routes/shares.js';
 
 const app = new Hono();
 
@@ -106,6 +108,8 @@ app.route('/api/events', events);
 app.route('/api/discover', discover);
 app.route('/api/stats', stats);
 app.route('/api/knowledge', knowledge);
+app.route('/api/tags', tags);
+app.route('/api/shared', shares);
 app.route('/api/webhook', webhook);
 
 // Error handler
