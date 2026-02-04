@@ -50,8 +50,15 @@ export interface Entry {
 export interface EntryTranslation {
   language: string;
   title: string;
+  translatedTitle?: string;
   content: string;
+  paragraphs?: TranslationParagraph[];
   summary?: string;
+}
+
+export interface TranslationParagraph {
+  original: string;
+  translated: string;
 }
 
 export interface EntriesResponse {

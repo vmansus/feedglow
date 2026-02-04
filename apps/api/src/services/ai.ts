@@ -61,6 +61,7 @@ export interface TranslationParagraph {
 export interface TranslationResult {
   title: string;
   translatedTitle: string;
+  content: string;  // backward compat: all translated paragraphs joined
   paragraphs: TranslationParagraph[];
   summary?: string;
   tokens: number;
@@ -208,6 +209,7 @@ Return format:
     return {
       title: entry.title,
       translatedTitle: parsed.title,
+      content: translatedParagraphs.map(p => p.translated).join('\n\n'),
       paragraphs: translatedParagraphs,
       summary: parsed.summary,
       tokens: result.usage?.totalTokens || 0,
@@ -217,6 +219,7 @@ Return format:
     return {
       title: entry.title,
       translatedTitle: entry.title,
+      content: result.text,
       paragraphs: [{ original: content, translated: result.text }],
       tokens: result.usage?.totalTokens || 0,
     };
