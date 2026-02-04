@@ -113,7 +113,17 @@ export function useUpdateEntriesStatus() {
   });
 }
 
-// AI Features
+// AI Features - Full content with caching
+export function useFullContent(entryId: number, enabled: boolean = false) {
+  return useQuery({
+    queryKey: ['fullContent', entryId],
+    queryFn: () => api.fetchFullContent(entryId),
+    enabled: enabled && !!entryId,
+    staleTime: Infinity, // Never refetch automatically - content doesn't change
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+  });
+}
+
 export function useFetchFullContent() {
   return useMutation({
     mutationFn: api.fetchFullContent,

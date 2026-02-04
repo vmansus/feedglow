@@ -16,7 +16,7 @@ import {
   FileText
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize, useFetchFullContent } from '@/hooks';
+import { useToggleBookmark, useSummarize, useFullContent } from '@/hooks';
 import { useLayout } from '@/contexts/layout-context';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
@@ -32,12 +32,12 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
   const [showChat, setShowChat] = useState(false);
-  const [fullContent, setFullContent] = useState<string | null>(null);
+  const [fetchFullEnabled, setFetchFullEnabled] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
-  const fetchFullContent = useFetchFullContent();
+  const fullContentQuery = useFullContent(entry.id, fetchFullEnabled);
   const readerSettings = useReaderSettings();
   const { fullscreen, toggleFullscreen } = useLayout();
 
@@ -45,7 +45,8 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     setIsStarred(entry.starred);
     setTranslateEnabled(false);
     setReadProgress(0);
-    setFullContent(null);
+    // Check if we already have cached full content for this entry
+    setFetchFullEnabled(!!fullContentQuery.data);
   }, [entry.id, entry.starred]);
 
   useEffect(() => {
@@ -246,19 +247,15 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
             {/* Fetch full content */}
             <button
-              onClick={() => {
-                fetchFullContent.mutate(entry.id, {
-                  onSuccess: (data) => setFullContent(data.content),
-                });
-              }}
-              disabled={fetchFullContent.isPending || !!fullContent}
+              onClick={() => setFetchFullEnabled(true)}
+              disabled={fullContentQuery.isFetching || !!fullContentQuery.data}
               className={cn(
                 "btn-subtle flex items-center gap-2",
-                fullContent && "bg-green-500/20 text-green-400 border-green-500/40"
+                fullContentQuery.data && "bg-green-500/20 text-green-400 border-green-500/40"
               )}
             >
               <FileText className="w-4 h-4" />
-              {fetchFullContent.isPending ? '获取中...' : fullContent ? '已获取全文' : '获取全文'}
+              {fullContentQuery.isFetching ? '获取中...' : fullContentQuery.data ? '已获取全文' : '获取全文'}
             </button>
 
             {/* Translation toggle - simple on/off */}
@@ -277,7 +274,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           {/* Main Content - with optional bilingual translation */}
           <div style={getReaderStyles(readerSettings.settings)}>
             <BilingualContent 
-              content={fullContent || entry.content}
+              content={fullContentQuery.data?.content || entry.content}
               entryId={entry.id}
               enabled={translateEnabled}
             />
