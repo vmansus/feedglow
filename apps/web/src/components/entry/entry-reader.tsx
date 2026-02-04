@@ -12,10 +12,11 @@ import {
   Sparkles,
   MessageCircle,
   Maximize2,
-  Minimize2
+  Minimize2,
+  FileText
 } from 'lucide-react';
 import type { Entry } from '@feedglow/shared';
-import { useToggleBookmark, useSummarize } from '@/hooks';
+import { useToggleBookmark, useSummarize, useFetchFullContent } from '@/hooks';
 import { useLayout } from '@/contexts/layout-context';
 import { ReaderSettingsButton, useReaderSettings, getReaderStyles } from '@/components/ui/reader-settings';
 import { ChatPanel } from './chat-panel';
@@ -31,10 +32,12 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
   const [isStarred, setIsStarred] = useState(entry.starred);
   const [readProgress, setReadProgress] = useState(0);
   const [showChat, setShowChat] = useState(false);
+  const [fullContent, setFullContent] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
   const toggleBookmark = useToggleBookmark();
   const summarize = useSummarize();
+  const fetchFullContent = useFetchFullContent();
   const readerSettings = useReaderSettings();
   const { fullscreen, toggleFullscreen } = useLayout();
 
@@ -42,6 +45,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
     setIsStarred(entry.starred);
     setTranslateEnabled(false);
     setReadProgress(0);
+    setFullContent(null);
   }, [entry.id, entry.starred]);
 
   useEffect(() => {
@@ -240,6 +244,23 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-8 pb-6 border-b border-default flex-wrap">
+            {/* Fetch full content */}
+            <button
+              onClick={() => {
+                fetchFullContent.mutate(entry.id, {
+                  onSuccess: (data) => setFullContent(data.content),
+                });
+              }}
+              disabled={fetchFullContent.isPending || !!fullContent}
+              className={cn(
+                "btn-subtle flex items-center gap-2",
+                fullContent && "bg-green-500/20 text-green-400 border-green-500/40"
+              )}
+            >
+              <FileText className="w-4 h-4" />
+              {fetchFullContent.isPending ? '获取中...' : fullContent ? '已获取全文' : '获取全文'}
+            </button>
+
             {/* Translation toggle - simple on/off */}
             <button
               onClick={() => setTranslateEnabled(!translateEnabled)}
@@ -256,7 +277,7 @@ export function EntryReader({ entry, onClose }: EntryReaderProps) {
           {/* Main Content - with optional bilingual translation */}
           <div style={getReaderStyles(readerSettings.settings)}>
             <BilingualContent 
-              content={entry.content}
+              content={fullContent || entry.content}
               entryId={entry.id}
               enabled={translateEnabled}
             />
