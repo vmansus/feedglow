@@ -206,5 +206,43 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_fg_shares_code ON fg_shares(share_code)
   `);
 
+  // ============ P1: Digests ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_digests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      date VARCHAR(10) NOT NULL,
+      summary TEXT,
+      highlights TEXT,
+      category_summaries TEXT,
+      generated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, date)
+    )
+  `);
+
+  // ============ P1: Notification Rules ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_notification_rules (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name VARCHAR(200),
+      feed_id INTEGER,
+      keyword VARCHAR(500),
+      channel VARCHAR(50) NOT NULL DEFAULT 'webhook',
+      webhook_url TEXT,
+      telegram_chat_id VARCHAR(100),
+      discord_webhook_url TEXT,
+      enabled BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_fg_notif_rules_user ON fg_notification_rules(user_id)
+  `);
+
   console.log('[DB] Migrations complete');
 }

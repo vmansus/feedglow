@@ -81,12 +81,23 @@ feeds.post(
   }
 );
 
-// Update feed
+// Update feed (with advanced settings — P1 #9)
 const updateFeedSchema = z.object({
   title: z.string().optional(),
   categoryId: z.number().optional(),
   disabled: z.boolean().optional(),
   crawler: z.boolean().optional(),
+  user_agent: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  scraper_rules: z.string().optional(),
+  rewrite_rules: z.string().optional(),
+  blocklist_rules: z.string().optional(),
+  keeplist_rules: z.string().optional(),
+  ignore_http_cache: z.boolean().optional(),
+  fetch_via_proxy: z.boolean().optional(),
+  no_media_player: z.boolean().optional(),
+  hide_globally: z.boolean().optional(),
 });
 
 feeds.patch(
@@ -96,12 +107,26 @@ feeds.patch(
     const id = parseInt(c.req.param('id'));
     const updates = c.req.valid('json');
     const client = getClient(c);
-    const feed = await client.updateFeed(id, {
-      title: updates.title,
-      category_id: updates.categoryId,
-      disabled: updates.disabled,
-      crawler: updates.crawler,
-    } as any);
+
+    // Map our field names to Miniflux field names
+    const minifluxUpdates: Record<string, unknown> = {};
+    if (updates.title !== undefined) minifluxUpdates.title = updates.title;
+    if (updates.categoryId !== undefined) minifluxUpdates.category_id = updates.categoryId;
+    if (updates.disabled !== undefined) minifluxUpdates.disabled = updates.disabled;
+    if (updates.crawler !== undefined) minifluxUpdates.crawler = updates.crawler;
+    if (updates.user_agent !== undefined) minifluxUpdates.user_agent = updates.user_agent;
+    if (updates.username !== undefined) minifluxUpdates.username = updates.username;
+    if (updates.password !== undefined) minifluxUpdates.password = updates.password;
+    if (updates.scraper_rules !== undefined) minifluxUpdates.scraper_rules = updates.scraper_rules;
+    if (updates.rewrite_rules !== undefined) minifluxUpdates.rewrite_rules = updates.rewrite_rules;
+    if (updates.blocklist_rules !== undefined) minifluxUpdates.blocklist_rules = updates.blocklist_rules;
+    if (updates.keeplist_rules !== undefined) minifluxUpdates.keeplist_rules = updates.keeplist_rules;
+    if (updates.ignore_http_cache !== undefined) minifluxUpdates.ignore_http_cache = updates.ignore_http_cache;
+    if (updates.fetch_via_proxy !== undefined) minifluxUpdates.fetch_via_proxy = updates.fetch_via_proxy;
+    if (updates.no_media_player !== undefined) minifluxUpdates.no_media_player = updates.no_media_player;
+    if (updates.hide_globally !== undefined) minifluxUpdates.hide_globally = updates.hide_globally;
+
+    const feed = await client.updateFeed(id, minifluxUpdates as any);
     return c.json(feed);
   }
 );

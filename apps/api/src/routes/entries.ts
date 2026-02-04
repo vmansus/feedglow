@@ -22,6 +22,8 @@ import { extractThumbnail, extractAllImages } from '../services/thumbnail.js';
 import { getFeedScores, calculateEntryScore } from '../services/user-events.js';
 import { chatWithArticle, indexEntry, semanticSearch } from '../services/chat.js';
 import { getReadingProgress, saveReadingProgress, getReadingHistory } from '../services/reading.js';
+import { estimateReadingTime } from '../services/reading-time.js';
+import { sanitizeContent, sanitizeUrl } from '../services/privacy.js';
 
 const entries = new Hono();
 
@@ -144,12 +146,25 @@ entries.get('/', async (c) => {
   return c.json(result);
 });
 
-// Get single entry
+// Get single entry (enhanced with reading time + sanitized content)
 entries.get('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const client = getClient(c);
   const entry = await client.getEntry(id);
-  return c.json(entry);
+
+  // Enhance with reading time estimate
+  const readingTimeMinutes = entry.content ? estimateReadingTime(entry.content) : (entry.reading_time || 0);
+
+  // Sanitize content and URL
+  const sanitizedContent = entry.content ? sanitizeContent(entry.content) : entry.content;
+  const sanitizedUrl = entry.url ? sanitizeUrl(entry.url) : entry.url;
+
+  return c.json({
+    ...entry,
+    reading_time_minutes: readingTimeMinutes,
+    sanitized_content: sanitizedContent,
+    sanitized_url: sanitizedUrl,
+  });
 });
 
 // Update entry status

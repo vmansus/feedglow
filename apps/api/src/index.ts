@@ -25,6 +25,9 @@ import stats from './routes/stats.js';
 import knowledge from './routes/knowledge.js';
 import tags from './routes/tags.js';
 import shares from './routes/shares.js';
+import digest from './routes/digest.js';
+import notifications from './routes/notifications.js';
+import exports_ from './routes/exports.js';
 
 const app = new Hono();
 
@@ -110,6 +113,9 @@ app.route('/api/stats', stats);
 app.route('/api/knowledge', knowledge);
 app.route('/api/tags', tags);
 app.route('/api/shared', shares);
+app.route('/api/digest', digest);
+app.route('/api/notifications', notifications);
+app.route('/api/export', exports_);
 app.route('/api/webhook', webhook);
 
 // Error handler
