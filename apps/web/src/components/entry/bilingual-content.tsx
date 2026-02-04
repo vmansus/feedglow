@@ -75,30 +75,80 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
       if (processedTexts.has(normalizedText)) return; // Skip duplicates
       processedTexts.add(normalizedText);
       
-      // Create translation container
+      // Create wrapper for translation + toggle
+      const wrapper = document.createElement('div');
+      wrapper.className = 'feedglow-translation-wrapper';
+      wrapper.style.cssText = `
+        position: relative;
+        margin-top: 0.25rem;
+        margin-bottom: 0.75rem;
+      `;
+      
+      // Create translation container (hidden by default when collapsed)
       const transDiv = document.createElement('div');
       transDiv.className = 'feedglow-translation';
       transDiv.style.cssText = `
-        margin-top: 0.5rem;
-        margin-bottom: 1rem;
         padding-left: 0.75rem;
         border-left: 2px solid rgba(249, 115, 22, 0.4);
         color: rgba(249, 115, 22, 0.9);
         font-size: 0.875rem;
         line-height: 1.6;
+        transition: all 0.2s ease;
       `;
+      
+      // Create collapse toggle icon
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'feedglow-translation-toggle';
+      toggleBtn.innerHTML = '🌐';
+      toggleBtn.title = '点击展开/折叠翻译';
+      toggleBtn.style.cssText = `
+        display: none;
+        position: absolute;
+        left: -1.5rem;
+        top: 0;
+        background: rgba(249, 115, 22, 0.15);
+        border: none;
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      `;
+      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.opacity = '1'; });
+      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.opacity = '0.7'; });
+      
+      // Toggle visibility on click
+      toggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isCollapsed = transDiv.style.display === 'none';
+        if (isCollapsed) {
+          transDiv.style.display = 'block';
+          toggleBtn.style.opacity = '0.5';
+          toggleBtn.style.left = '-1.5rem';
+        } else {
+          transDiv.style.display = 'none';
+          toggleBtn.style.opacity = '1';
+          toggleBtn.style.left = '0';
+        }
+      });
       
       // Check cache first
       if (translationCache.current[text]) {
         transDiv.textContent = translationCache.current[text];
+        toggleBtn.style.display = 'inline-block';
       } else {
         transDiv.innerHTML = `<span style="opacity: 0.5">滚动到此处开始翻译...</span>`;
         transDiv.setAttribute('data-pending', 'true');
         transDiv.setAttribute('data-text', text);
       }
       
+      wrapper.appendChild(toggleBtn);
+      wrapper.appendChild(transDiv);
+      
       // Insert after the block
-      block.parentNode?.insertBefore(transDiv, block.nextSibling);
+      block.parentNode?.insertBefore(wrapper, block.nextSibling);
     });
 
     // Setup Intersection Observer for lazy loading
@@ -106,11 +156,12 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const el = entry.target as HTMLElement;
-            if (el.getAttribute('data-pending') === 'true') {
-              const text = el.getAttribute('data-text');
+            const wrapper = entry.target as HTMLElement;
+            const transDiv = wrapper.querySelector('.feedglow-translation') as HTMLElement;
+            if (transDiv?.getAttribute('data-pending') === 'true') {
+              const text = transDiv.getAttribute('data-text');
               if (text) {
-                pendingTexts.current.set(el, text);
+                pendingTexts.current.set(wrapper, text);
                 scheduleBatch();
               }
             }
@@ -120,9 +171,12 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
       { rootMargin: '200px', threshold: 0.1 }
     );
 
-    // Observe all pending translation divs
-    containerRef.current.querySelectorAll('.feedglow-translation[data-pending="true"]').forEach((el) => {
-      observerRef.current?.observe(el);
+    // Observe all pending translation wrappers
+    containerRef.current.querySelectorAll('.feedglow-translation-wrapper').forEach((el) => {
+      const transDiv = el.querySelector('.feedglow-translation');
+      if (transDiv?.getAttribute('data-pending') === 'true') {
+        observerRef.current?.observe(el);
+      }
     });
 
     return () => {
@@ -142,16 +196,19 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
       // Take up to 5 at a time
       const batch = pending.slice(0, 5);
       const texts = batch.map(([, text]) => text);
-      const elements = batch.map(([el]) => el);
+      const wrappers = batch.map(([el]) => el);
       
       // Mark as loading
-      elements.forEach((el) => {
-        (el as HTMLElement).innerHTML = `
-          <span style="display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.5">
-            <span style="width: 12px; height: 12px; border: 2px solid rgba(249,115,22,0.3); border-top-color: rgb(249,115,22); border-radius: 50%; animation: spin 1s linear infinite"></span>
-            翻译中...
-          </span>
-        `;
+      wrappers.forEach((wrapper) => {
+        const transDiv = (wrapper as HTMLElement).querySelector('.feedglow-translation') as HTMLElement;
+        if (transDiv) {
+          transDiv.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.5">
+              <span style="width: 12px; height: 12px; border: 2px solid rgba(249,115,22,0.3); border-top-color: rgb(249,115,22); border-radius: 50%; animation: spin 1s linear infinite"></span>
+              翻译中...
+            </span>
+          `;
+        }
       });
       
       // Remove from pending
@@ -160,12 +217,23 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
       try {
         const translations = await translateParagraphs(texts, language);
         
-        elements.forEach((el, i) => {
-          const htmlEl = el as HTMLElement;
-          htmlEl.textContent = translations[i] || '[翻译失败]';
-          htmlEl.removeAttribute('data-pending');
-          htmlEl.removeAttribute('data-text');
-          observerRef.current?.unobserve(el);
+        wrappers.forEach((wrapper, i) => {
+          const wrapperEl = wrapper as HTMLElement;
+          const transDiv = wrapperEl.querySelector('.feedglow-translation') as HTMLElement;
+          const toggleBtn = wrapperEl.querySelector('.feedglow-translation-toggle') as HTMLElement;
+          
+          if (transDiv) {
+            transDiv.textContent = translations[i] || '[翻译失败]';
+            transDiv.removeAttribute('data-pending');
+            transDiv.removeAttribute('data-text');
+          }
+          
+          // Show toggle button now that translation is ready
+          if (toggleBtn) {
+            toggleBtn.style.display = 'inline-block';
+          }
+          
+          observerRef.current?.unobserve(wrapper);
           
           // Cache it
           translationCache.current[texts[i]] = translations[i];
@@ -179,8 +247,11 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
           scheduleBatch();
         }
       } catch {
-        elements.forEach((el) => {
-          (el as HTMLElement).textContent = '[翻译失败]';
+        wrappers.forEach((wrapper) => {
+          const transDiv = (wrapper as HTMLElement).querySelector('.feedglow-translation') as HTMLElement;
+          if (transDiv) {
+            transDiv.textContent = '[翻译失败]';
+          }
         });
       }
     }, 150);
@@ -194,7 +265,10 @@ export function BilingualContent({ content, entryId, enabled }: BilingualContent
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
-      style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+      style.textContent = `
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .feedglow-translation-toggle:hover { background: rgba(249, 115, 22, 0.25) !important; }
+      `;
       document.head.appendChild(style);
     }
   }, []);
