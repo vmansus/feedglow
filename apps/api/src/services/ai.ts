@@ -270,10 +270,20 @@ Respond with a JSON array of tags:
  */
 function stripHtml(html: string): string {
   return html
+    // Remove script and style
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    // Convert block elements to newlines for paragraph preservation
+    .replace(/<\/(p|div|h[1-6]|li|blockquote|article|section)>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<(p|div|h[1-6]|li|blockquote|article|section)\b[^>]*>/gi, '')
+    // Remove remaining tags
     .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
+    // Clean up whitespace but preserve paragraph breaks
+    .replace(/[ \t]+/g, ' ')  // collapse spaces/tabs but not newlines
+    .replace(/\n[ \t]+/g, '\n')  // trim leading spaces after newline
+    .replace(/[ \t]+\n/g, '\n')  // trim trailing spaces before newline
+    .replace(/\n{3,}/g, '\n\n')  // max 2 consecutive newlines
     .trim();
 }
 
