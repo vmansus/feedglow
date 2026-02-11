@@ -1,0 +1,29 @@
+name: Deploy FeedGlow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Wait for webhook deploy
+        run: |
+          echo "⏳ Waiting for webhook auto-deploy to finish..."
+          sleep 30
+
+      - name: Health Check
+        run: |
+          STATUS=$(curl -sf ${{ secrets.DEPLOY_URL }}/health || echo "FAIL")
+          echo "Health: $STATUS"
+          if echo "$STATUS" | grep -q '"status":"ok"'; then
+            echo "✅ Deploy successful!"
+          else
+            echo "⚠️ Health check failed"
+            exit 1
+          fi

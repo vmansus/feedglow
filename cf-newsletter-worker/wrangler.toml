@@ -1,0 +1,7 @@
+name = "feedglow-newsletter"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+FEEDGLOW_API = "https://your-domain.com"
+# WEBHOOK_SECRET should be set via `wrangler secret put WEBHOOK_SECRET`

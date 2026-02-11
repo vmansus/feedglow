@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FeedGlow Design Concept</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    
+    /* The Glow Effect - Our Signature */
+    .glow-orange {
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.3), 0 0 40px rgba(249, 115, 22, 0.1);
+    }
+    .glow-subtle {
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.15);
+    }
+    .text-glow {
+      text-shadow: 0 0 20px rgba(249, 115, 22, 0.5);
+    }
+    
+    /* Vercel-style gradient border */
+    .gradient-border {
+      background: linear-gradient(135deg, rgba(249,115,22,0.2) 0%, transparent 50%);
+    }
+    
+    /* Smooth transitions */
+    .transition-smooth {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen">
+  
+  <div class="flex h-screen">
+    
+    <!-- Sidebar - Minimal, Icon-First -->
+    <aside class="w-16 border-r border-white/5 flex flex-col items-center py-4 gap-2">
+      <!-- Logo with Glow -->
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-4 glow-orange">
+        <span class="text-lg font-bold">F</span>
+      </div>
+      
+      <!-- Quick Nav Icons -->
+      <button class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/15 transition-smooth relative">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+        <span class="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full text-[10px] flex items-center justify-center font-medium">3</span>
+      </button>
+      
+      <button class="w-10 h-10 rounded-lg hover:bg-white/10 flex items-center justify-center transition-smooth text-white/50 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+      </button>
+      
+      <button class="w-10 h-10 rounded-lg hover:bg-white/10 flex items-center justify-center transition-smooth text-white/50 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      </button>
+      
+      <div class="flex-1"></div>
+      
+      <!-- Settings at bottom -->
+      <button class="w-10 h-10 rounded-lg hover:bg-white/10 flex items-center justify-center transition-smooth text-white/40 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </button>
+    </aside>
+    
+    <!-- Feed List - Expanded Sidebar -->
+    <aside class="w-64 border-r border-white/5 flex flex-col">
+      <!-- Search / Command -->
+      <div class="p-3">
+        <button class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 text-sm text-left flex items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-smooth">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          Search...
+          <span class="ml-auto text-xs bg-white/10 px-1.5 py-0.5 rounded">⌘K</span>
+        </button>
+      </div>
+      
+      <!-- Feeds -->
+      <div class="flex-1 overflow-y-auto px-2">
+        <div class="text-[10px] uppercase tracking-wider text-white/30 px-2 py-2">Feeds</div>
+        
+        <!-- Feed Item - Selected -->
+        <div class="group px-2 py-2 rounded-lg bg-white/10 mb-0.5 cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">E</div>
+            <span class="text-sm truncate flex-1">Epic Games Store</span>
+            <span class="text-xs text-orange-400 font-medium">18</span>
+          </div>
+        </div>
+        
+        <!-- Feed Item -->
+        <div class="group px-2 py-2 rounded-lg hover:bg-white/5 mb-0.5 cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">H</div>
+            <span class="text-sm text-white/70 group-hover:text-white truncate flex-1 transition-smooth">Hacker News</span>
+            <span class="text-xs text-white/40">42</span>
+          </div>
+        </div>
+        
+        <!-- Feed Item -->
+        <div class="group px-2 py-2 rounded-lg hover:bg-white/5 mb-0.5 cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded bg-black border border-white/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0">▲</div>
+            <span class="text-sm text-white/70 group-hover:text-white truncate flex-1 transition-smooth">Vercel Blog</span>
+            <span class="text-xs text-white/40">7</span>
+          </div>
+        </div>
+        
+        <!-- Feed Item -->
+        <div class="group px-2 py-2 rounded-lg hover:bg-white/5 mb-0.5 cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">O</div>
+            <span class="text-sm text-white/70 group-hover:text-white truncate flex-1 transition-smooth">OpenAI News</span>
+            <span class="text-xs text-white/40">3</span>
+          </div>
+        </div>
+        
+        <!-- Feed Item with dot (new) -->
+        <div class="group px-2 py-2 rounded-lg hover:bg-white/5 mb-0.5 cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-[10px] font-bold flex-shrink-0">美</div>
+            <span class="text-sm text-white/70 group-hover:text-white truncate flex-1 transition-smooth">美团技术</span>
+            <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Article List -->
+    <main class="w-96 border-r border-white/5 flex flex-col">
+      <!-- Header -->
+      <div class="p-4 border-b border-white/5 flex items-center justify-between">
+        <div>
+          <h1 class="font-semibold">Epic Games Store</h1>
+          <p class="text-xs text-white/40">18 unread</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-smooth">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          </button>
+          <button class="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-smooth">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"></path></svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Articles -->
+      <div class="flex-1 overflow-y-auto">
+        <!-- Article - Selected with Glow -->
+        <article class="p-4 border-b border-white/5 bg-white/5 cursor-pointer relative gradient-border">
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500 glow-orange"></div>
+          <div class="flex gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs text-white/40">5 天前</span>
+              </div>
+              <h3 class="font-medium mb-1 line-clamp-2">Rustler - Grand Theft Horse</h3>
+              <p class="text-sm text-white/50 line-clamp-2">Become a medieval thug in a crazy open-world action game, full of pop-culture references...</p>
+            </div>
+            <img src="https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=80&h=80&fit=crop" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+          </div>
+        </article>
+        
+        <!-- Article -->
+        <article class="p-4 border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-smooth">
+          <div class="flex gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs text-white/40">12 天前</span>
+              </div>
+              <h3 class="font-medium mb-1 text-white/80 line-clamp-2">Styx: Master of Shadows</h3>
+              <p class="text-sm text-white/40 line-clamp-2">Styx: Master of Shadows is an infiltration game with RPG elements...</p>
+            </div>
+            <img src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=80&h=80&fit=crop" class="w-16 h-16 rounded-lg object-cover flex-shrink-0 opacity-70" />
+          </div>
+        </article>
+        
+        <!-- Article -->
+        <article class="p-4 border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-smooth">
+          <div class="flex gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs text-white/40">19 天前</span>
+              </div>
+              <h3 class="font-medium mb-1 text-white/80 line-clamp-2">Bloons TD 6</h3>
+              <p class="text-sm text-white/40 line-clamp-2">The Bloons are back and better than ever! Get ready for a massive 3D tower defense game...</p>
+            </div>
+            <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=80&h=80&fit=crop" class="w-16 h-16 rounded-lg object-cover flex-shrink-0 opacity-70" />
+          </div>
+        </article>
+        
+        <!-- Article without image -->
+        <article class="p-4 border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-smooth">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs text-white/40">1 个月前</span>
+          </div>
+          <h3 class="font-medium mb-1 text-white/80 line-clamp-2">Total War: THREE KINGDOMS</h3>
+          <p class="text-sm text-white/40 line-clamp-2">THREE KINGDOMS is the first in the award-winning series to recreate epic conflict across ancient China.</p>
+        </article>
+      </div>
+    </main>
+    
+    <!-- Reader -->
+    <section class="flex-1 flex flex-col bg-[#0c0c0c]">
+      <!-- Top Bar -->
+      <div class="p-4 border-b border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button class="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-smooth">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-smooth">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+          </button>
+          <button class="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-smooth">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Article Content -->
+      <div class="flex-1 overflow-y-auto">
+        <article class="max-w-2xl mx-auto px-6 py-8">
+          <!-- Meta -->
+          <div class="flex items-center gap-3 mb-4 text-sm text-white/40">
+            <div class="w-5 h-5 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-bold">E</div>
+            <span>Epic Games Store</span>
+            <span>•</span>
+            <span>5 天前</span>
+          </div>
+          
+          <!-- Title -->
+          <h1 class="text-3xl font-bold mb-6 leading-tight">Rustler - Grand Theft Horse</h1>
+          
+          <!-- AI Summary Card - The Glow Feature -->
+          <div class="mb-8 p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 glow-subtle">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              </div>
+              <span class="font-medium text-orange-400">AI Summary</span>
+            </div>
+            <p class="text-white/70 text-sm leading-relaxed">A medieval open-world action game with GTA-style gameplay. Features include horse-stealing, sword fighting, jousting tournaments, and bard music. Parodies popular culture with humor throughout.</p>
+          </div>
+          
+          <!-- Actions -->
+          <div class="flex items-center gap-2 mb-8 pb-6 border-b border-white/10">
+            <button class="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10 transition-smooth flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+              Translate
+            </button>
+            <button class="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10 transition-smooth flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Full Article
+            </button>
+          </div>
+          
+          <!-- Content -->
+          <div class="prose prose-invert prose-sm max-w-none">
+            <p class="text-white/70 leading-relaxed">Become a medieval thug in a crazy open-world action game, full of pop-culture references. Complete insane quests, kill heroes, steal horses, fight guards, rob peasants, listen to some bard music, and much more! All packed in old-school gameplay style!</p>
+            
+            <img src="https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=800" class="w-full rounded-xl my-6" />
+            
+            <h2 class="text-xl font-semibold mt-8 mb-4 text-white">Features</h2>
+            <ul class="text-white/60 space-y-2">
+              <li>Open world medieval sandbox</li>
+              <li>Horse-stealing mechanics</li>
+              <li>Jousting tournaments</li>
+              <li>Dynamic combat system</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      
+      <!-- Reading Progress -->
+      <div class="h-0.5 bg-white/5">
+        <div class="h-full w-1/3 bg-gradient-to-r from-orange-500 to-orange-400 glow-orange"></div>
+      </div>
+    </section>
+    
+  </div>
+  
+  <!-- Design Notes Overlay -->
+  <div class="fixed bottom-4 right-4 p-4 bg-black/90 border border-white/10 rounded-xl max-w-sm text-sm backdrop-blur">
+    <h3 class="font-semibold text-orange-400 mb-2">🎨 FeedGlow Design Language</h3>
+    <ul class="text-white/60 space-y-1 text-xs">
+      <li>• <span class="text-orange-400">Glow effects</span> as visual anchors</li>
+      <li>• <span class="text-white/80">Dark-first</span> with subtle gradients</li>
+      <li>• <span class="text-white/80">Icon-driven</span> minimal sidebar</li>
+      <li>• <span class="text-white/80">Thumbnails</span> in article list</li>
+      <li>• <span class="text-orange-400">AI Summary</span> card with brand glow</li>
+      <li>• <span class="text-white/80">Vercel-style</span> borders & spacing</li>
+    </ul>
+  </div>
+  
+</body>
+</html>
