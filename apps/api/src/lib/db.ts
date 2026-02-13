@@ -854,5 +854,20 @@ export async function runMigrations(): Promise<void> {
     )
   `);
 
+  // ============ Podcast Transcripts ============
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS fg_transcripts (
+      id SERIAL PRIMARY KEY,
+      entry_id INTEGER NOT NULL,
+      segments JSONB NOT NULL DEFAULT '[]',
+      source_url TEXT,
+      source VARCHAR(20) DEFAULT 'webpage',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(entry_id)
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_fg_transcripts_entry ON fg_transcripts(entry_id)');
+
   console.log('[DB] Migrations complete');
 }

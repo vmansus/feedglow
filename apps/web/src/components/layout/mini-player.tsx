@@ -2,11 +2,14 @@
 
 import { useState, useRef } from 'react';
 import { useAudioPlayer } from '@/contexts/audio-player-context';
-import { Play, Pause, X, RotateCcw, RotateCw, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Play, Pause, X, RotateCcw, RotateCw, ChevronUp, ChevronDown, Loader2, Captions, CaptionsOff } from 'lucide-react';
+import { cn } from '@feedglow/ui';
+import { TranscriptViewer } from '@/components/entry/transcript-viewer';
 
 export function MiniPlayer() {
   const player = useAudioPlayer();
   const [expanded, setExpanded] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [hoverProgress, setHoverProgress] = useState(false);
   const [dragPct, setDragPct] = useState(0);
@@ -64,6 +67,16 @@ export function MiniPlayer() {
 
   return (
     <div className="w-full flex-shrink-0 bg-[rgb(var(--bg-primary))] border-t border-[rgb(var(--border-default))]">
+      {/* Transcript panel (slides up above mini-player) */}
+      {showTranscript && player.track?.entryId && (
+        <div className="border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-elevated))]">
+          <TranscriptViewer
+            entryId={player.track.entryId}
+            onClose={() => setShowTranscript(false)}
+          />
+        </div>
+      )}
+
       {/* Progress bar (thicker, with buffer indicator and seek handle) */}
       <div
         ref={progressRef}
@@ -143,6 +156,20 @@ export function MiniPlayer() {
             className="px-2 py-1 rounded-lg text-xs font-mono text-muted hover:text-[rgb(var(--text-primary))] transition-colors hidden sm:block">
             {player.playbackRate}x
           </button>
+
+          {/* Transcript / CC toggle */}
+          {player.track?.entryId && (
+            <button onClick={() => setShowTranscript(!showTranscript)}
+              className={cn(
+                "p-1.5 rounded-lg transition-colors hidden sm:block",
+                showTranscript
+                  ? "text-orange-500 bg-orange-500/10"
+                  : "text-muted hover:text-[rgb(var(--text-primary))]"
+              )}
+              title={showTranscript ? 'Hide transcript' : 'Show transcript'}>
+              {showTranscript ? <CaptionsOff className="w-4 h-4" /> : <Captions className="w-4 h-4" />}
+            </button>
+          )}
 
           {/* Expand */}
           <button onClick={() => setExpanded(!expanded)}

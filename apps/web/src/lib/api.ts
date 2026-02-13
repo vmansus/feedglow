@@ -937,6 +937,31 @@ export async function getPodcastFeeds(): Promise<Feed[]> {
   return request<Feed[]>('/api/podcast/feeds');
 }
 
+// ============ Podcast Transcripts ============
+
+export interface TranscriptSegment {
+  startTime: number;
+  endTime: number;
+  speaker: string;
+  text: string;
+}
+
+export interface TranscriptData {
+  segments: TranscriptSegment[];
+  source: 'webpage' | 'srt' | 'vtt' | 'json';
+  url: string;
+}
+
+export async function getTranscript(entryId: number | string): Promise<TranscriptData | null> {
+  try {
+    const data = await request<TranscriptData>(`/api/podcast/transcript/${entryId}`);
+    if (!data || !data.segments || data.segments.length === 0) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 // ============ RSSHub Discovery ============
 
 export interface RSSHubRoute {

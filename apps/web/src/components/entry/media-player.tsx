@@ -1,16 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { 
   Play, 
   Pause, 
   RotateCcw,
   RotateCw,
   Download,
-  Loader2
+  Loader2,
+  Captions,
+  CaptionsOff
 } from 'lucide-react';
 import { cn } from '@feedglow/ui';
 import { t } from '@/lib/i18n';
 import { useAudioPlayer } from '@/contexts/audio-player-context';
+import { TranscriptViewer } from './transcript-viewer';
 
 interface Enclosure {
   url: string;
@@ -27,6 +31,7 @@ interface MediaPlayerProps {
 
 export function MediaPlayer({ enclosures, title, feedTitle, entryId }: MediaPlayerProps) {
   const player = useAudioPlayer();
+  const [showTranscript, setShowTranscript] = useState(false);
 
   const currentMedia = enclosures[0];
   if (!currentMedia) return null;
@@ -135,6 +140,21 @@ export function MediaPlayer({ enclosures, title, feedTitle, entryId }: MediaPlay
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Transcript / CC toggle */}
+          {entryId && (
+            <button
+              onClick={() => setShowTranscript(!showTranscript)}
+              className={cn(
+                "p-1.5 rounded-lg transition-colors",
+                showTranscript
+                  ? "text-orange-500 bg-orange-500/10"
+                  : "text-muted hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
+              )}
+              title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+            >
+              {showTranscript ? <CaptionsOff className="w-3.5 h-3.5" /> : <Captions className="w-3.5 h-3.5" />}
+            </button>
+          )}
           <a
             href={currentMedia.url}
             download
@@ -145,6 +165,16 @@ export function MediaPlayer({ enclosures, title, feedTitle, entryId }: MediaPlay
           </a>
         </div>
       </div>
+
+      {/* Transcript Panel */}
+      {showTranscript && entryId && (
+        <div className="mt-2 border-t border-[rgb(var(--border-default))]">
+          <TranscriptViewer
+            entryId={entryId}
+            onClose={() => setShowTranscript(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

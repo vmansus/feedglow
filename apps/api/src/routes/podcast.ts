@@ -20,6 +20,7 @@ import {
   getInProgressMedia,
   getMediaStats,
 } from '../services/podcast.js';
+import { getTranscriptForEntry } from '../services/transcript.js';
 
 const podcast = new Hono();
 
@@ -277,6 +278,38 @@ podcast.get('/stats', async (c) => {
   const user = c.get('user') as JWTPayload;
   const stats = await getMediaStats(user.userId);
   return c.json(stats);
+});
+
+// ============ Transcript ============
+
+/**
+ * GET /api/podcast/transcript/:entryId
+ * Extract and return transcript for a podcast episode.
+ * Looks for transcript URLs in the entry content and parses them.
+ * Results are cached in fg_transcripts table.
+ */
+podcast.get('/transcript/:entryId', async (c) => {
+  const user = c.get('user') as JWTPayload;
+  const client = new FeedEngineDataClient(user.userId);
+  
+  try {
+    const entry = await client.getEntry(c.req.param('entryId'));
+    const numericId = (entry as any)._numericId;
+    
+    const transcript = await getTranscriptForEntry(numericId, entry.content || '');
+    
+    if (!transcript) {
+      return c.json({ error: 'No transcript found', segments: [], source: null, url: null }, 404);
+    }
+    
+    return c.json(transcript);
+  } catch (err: any) {
+    if (err.status === 404) {
+      return c.json({ error: 'Entry not found' }, 404);
+    }
+    console.error('[Transcript] Error:', err);
+    return c.json({ error: 'Failed to fetch transcript' }, 500);
+  }
 });
 
 export default podcast;
