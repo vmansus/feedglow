@@ -616,8 +616,8 @@ export async function insertEntries(feedId: number, userId: number, entries: Par
 
       // Upsert: insert new or update content if changed (detected by content_hash)
       const result = await query(
-        `INSERT INTO fg_entries (user_id, feed_id, hash, title, url, content, author, published_at, enclosure_url, enclosure_type, enclosure_size, content_hash, reading_time)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        `INSERT INTO fg_entries (user_id, feed_id, hash, title, url, content, author, published_at, enclosure_url, enclosure_type, enclosure_size, content_hash, reading_time, transcript_url, transcript_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (feed_id, hash) DO UPDATE SET
            title = EXCLUDED.title,
            content = CASE WHEN fg_entries.content_hash = 'full' THEN fg_entries.content
@@ -628,6 +628,8 @@ export async function insertEntries(feedId: number, userId: number, entries: Par
            reading_time = CASE WHEN fg_entries.content_hash = 'full' THEN fg_entries.reading_time
                                WHEN EXCLUDED.reading_time > 0 THEN EXCLUDED.reading_time
                                ELSE fg_entries.reading_time END,
+           transcript_url = COALESCE(EXCLUDED.transcript_url, fg_entries.transcript_url),
+           transcript_type = COALESCE(EXCLUDED.transcript_type, fg_entries.transcript_type),
            changed_at = CASE WHEN fg_entries.content_hash = 'full' THEN fg_entries.changed_at
                               WHEN fg_entries.content_hash IS DISTINCT FROM EXCLUDED.content_hash THEN NOW()
                               ELSE fg_entries.changed_at END
@@ -637,6 +639,7 @@ export async function insertEntries(feedId: number, userId: number, entries: Par
           entry.content, entry.author, entry.publishedAt,
           entry.enclosureUrl || null, entry.enclosureType || null, entry.enclosureSize || 0,
           entry.contentHash || null, readingTime,
+          entry.transcriptUrl || null, entry.transcriptType || null,
         ]
       );
       // Count only truly new inserts (not updates)

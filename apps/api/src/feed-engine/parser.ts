@@ -41,6 +41,8 @@ export interface ParsedEntry {
   enclosureType?: string;
   enclosureSize?: number;
   contentHash?: string; // For detecting content updates
+  transcriptUrl?: string;  // Podcasting 2.0 <podcast:transcript> URL
+  transcriptType?: string; // e.g. "application/srt", "text/vtt"
 }
 
 export interface FetchOptions {
@@ -68,9 +70,62 @@ const parser = new Parser({
     item: [
       ['media:content', 'mediaContent', { keepArray: false }],
       ['media:thumbnail', 'mediaThumbnail', { keepArray: false }],
+      ['podcast:transcript', 'podcastTranscript', { keepArray: true }],
+      ['podcast:transcript', 'podcast:transcript', { keepArray: true }],
     ],
   },
 });
+
+// ============ Podcast Transcript Extraction ============
+
+/**
+ * Extract <podcast:transcript> URL from RSS item.
+ * Podcasting 2.0 standard: https://github.com/Podcastindex-org/podcast-namespace
+ * Prefers SRT > VTT > JSON > HTML, and prefers the feed's language.
+ */
+function extractPodcastTranscript(item: any): { url: string; type: string } | null {
+  // rss-parser puts custom fields in various locations
+  const transcripts: any[] = 
+    item.podcastTranscript || 
+    item['podcast:transcript'] || 
+    item['itunes:transcript'] ||
+    [];
+
+  // Handle single object vs array
+  const list = Array.isArray(transcripts) ? transcripts : [transcripts];
+  
+  if (list.length === 0) return null;
+
+  // Priority: SRT > VTT > JSON > anything
+  const priorityTypes = [
+    'application/srt', 'text/srt',
+    'text/vtt', 'application/x-subrip',
+    'application/json',
+    'text/html', 'text/plain',
+  ];
+
+  for (const preferredType of priorityTypes) {
+    for (const t of list) {
+      const url = t?.url || t?.$?.url || t;
+      const type = t?.type || t?.$?.type || '';
+      if (url && typeof url === 'string' && url.startsWith('http')) {
+        if (type.includes(preferredType) || (!type && url.match(/\.(srt|vtt|json)$/i))) {
+          return { url, type: type || preferredType };
+        }
+      }
+    }
+  }
+
+  // Fallback: just take the first one with a URL
+  for (const t of list) {
+    const url = t?.url || t?.$?.url || t;
+    if (url && typeof url === 'string' && url.startsWith('http')) {
+      return { url, type: t?.type || t?.$?.type || '' };
+    }
+  }
+
+  return null;
+}
 
 // ============ 1. Robust Date Parsing ============
 
@@ -666,6 +721,9 @@ export async function parseFeed(
     const rawContent = item['content:encoded'] || item.content || item.summary || '';
     const entryUrl = item.link || '';
 
+    // Extract <podcast:transcript> tag (Podcasting 2.0 standard)
+    const transcriptTag = extractPodcastTranscript(item);
+
     return {
       hash: entryHash(item.guid || item.id, item.link, item.title || ''),
       title: item.title || '',
@@ -677,6 +735,8 @@ export async function parseFeed(
       enclosureType: enclosure?.type,
       enclosureSize: enclosure?.length ? parseInt(String(enclosure.length)) : undefined,
       contentHash: contentHash(rawContent),
+      transcriptUrl: transcriptTag?.url,
+      transcriptType: transcriptTag?.type,
     };
   });
 

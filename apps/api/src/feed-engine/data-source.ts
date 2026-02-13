@@ -526,6 +526,8 @@ function mapEntryToMiniflux(e: FGEntry): Entry {
     feedIconUrl,
     feedProfileImageUrl: (e.feed as any)?.profileImageUrl || undefined,
     feedType: (e.feed as any)?.feedType || 'article',
+    transcriptUrl: (e as any).transcriptUrl || (e as any).transcript_url || undefined,
+    transcriptType: (e as any).transcriptType || (e as any).transcript_type || undefined,
     publishedAt: e.publishedAt.toISOString(),
     readingTime: e.readingTime,
     feed: e.feed ? {

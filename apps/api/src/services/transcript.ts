@@ -308,7 +308,9 @@ function htmlToText(html: string): string {
  */
 export async function getTranscriptForEntry(
   entryId: number,
-  content: string
+  content: string,
+  transcriptUrlFromRss?: string | null,
+  transcriptTypeFromRss?: string | null,
 ): Promise<TranscriptData | null> {
   // 1. Check cache
   const cached = await getCachedTranscript(entryId);
@@ -320,8 +322,10 @@ export async function getTranscriptForEntry(
     };
   }
   
-  // 2. Extract transcript URL
-  const transcriptUrl = extractTranscriptUrl(content);
+  // 2. Find transcript URL — priority:
+  //    a) <podcast:transcript> tag from RSS (stored in DB)
+  //    b) Link with "transcript" in entry HTML content
+  const transcriptUrl = transcriptUrlFromRss || extractTranscriptUrl(content);
   if (!transcriptUrl) {
     return null;
   }

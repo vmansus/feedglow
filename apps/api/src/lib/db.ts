@@ -854,6 +854,10 @@ export async function runMigrations(): Promise<void> {
     )
   `);
 
+  // Migration: add transcript_url to fg_entries for Podcasting 2.0 <podcast:transcript>
+  await query(`ALTER TABLE fg_entries ADD COLUMN IF NOT EXISTS transcript_url TEXT`);
+  await query(`ALTER TABLE fg_entries ADD COLUMN IF NOT EXISTS transcript_type VARCHAR(50)`);
+
   // ============ Podcast Transcripts ============
 
   await query(`

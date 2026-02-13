@@ -296,7 +296,10 @@ podcast.get('/transcript/:entryId', async (c) => {
     const entry = await client.getEntry(c.req.param('entryId'));
     const numericId = (entry as any)._numericId;
     
-    const transcript = await getTranscriptForEntry(numericId, entry.content || '');
+    // Pass transcript_url from RSS <podcast:transcript> tag if available
+    const transcriptUrlFromRss = (entry as any).transcript_url || (entry as any).transcriptUrl || null;
+    const transcriptTypeFromRss = (entry as any).transcript_type || (entry as any).transcriptType || null;
+    const transcript = await getTranscriptForEntry(numericId, entry.content || '', transcriptUrlFromRss, transcriptTypeFromRss);
     
     if (!transcript) {
       return c.json({ error: 'No transcript found', segments: [], source: null, url: null }, 404);
