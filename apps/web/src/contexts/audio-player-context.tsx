@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import * as api from '@/lib/api';
+import { getStoredAuth } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface AudioTrack {
   url: string;
@@ -17,6 +20,8 @@ interface AudioPlayerState {
   duration: number;
   playbackRate: number;
   isLoading: boolean;
+  isSeeking: boolean;
+  buffered: number; // 0-100 percentage
 }
 
 interface AudioPlayerContextValue extends AudioPlayerState {
@@ -38,6 +43,13 @@ export function useAudioPlayer() {
   return ctx;
 }
 
+/** Build the proxy URL for streaming audio through our server */
+function getProxyUrl(entryId: number | string): string {
+  const auth = getStoredAuth();
+  const token = auth.token || '';
+  return `${API_BASE}/api/podcast/stream/${entryId}?token=${encodeURIComponent(token)}`;
+}
+
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
   const [track, setTrack] = useState<AudioTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -45,6 +57,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [buffered, setBuffered] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSavedProgress = useRef(0);
@@ -53,7 +67,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // Create audio element once
   useEffect(() => {
     const audio = new Audio();
-    audio.preload = 'metadata';
+    audio.preload = 'auto';
     audioRef.current = audio;
 
     const onTime = () => setCurrentTime(audio.currentTime);
@@ -61,12 +75,27 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const onLoadStart = () => setIsLoading(true);
     const onCanPlay = () => setIsLoading(false);
     const onEnded = () => setIsPlaying(false);
+    const onSeeking = () => setIsSeeking(true);
+    const onSeeked = () => setIsSeeking(false);
+    const onWaiting = () => setIsSeeking(true);
+    const onPlaying = () => { setIsSeeking(false); setIsLoading(false); };
+    const onProgress = () => {
+      if (audio.buffered.length > 0 && audio.duration > 0) {
+        const end = audio.buffered.end(audio.buffered.length - 1);
+        setBuffered((end / audio.duration) * 100);
+      }
+    };
 
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('durationchange', onDuration);
     audio.addEventListener('loadstart', onLoadStart);
     audio.addEventListener('canplay', onCanPlay);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('seeking', onSeeking);
+    audio.addEventListener('seeked', onSeeked);
+    audio.addEventListener('waiting', onWaiting);
+    audio.addEventListener('playing', onPlaying);
+    audio.addEventListener('progress', onProgress);
 
     return () => {
       audio.removeEventListener('timeupdate', onTime);
@@ -74,6 +103,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audio.removeEventListener('loadstart', onLoadStart);
       audio.removeEventListener('canplay', onCanPlay);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('seeking', onSeeking);
+      audio.removeEventListener('seeked', onSeeked);
+      audio.removeEventListener('waiting', onWaiting);
+      audio.removeEventListener('playing', onPlaying);
+      audio.removeEventListener('progress', onProgress);
       audio.pause();
       audio.src = '';
     };
@@ -105,7 +139,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (!audio) return;
 
     // Same track? Just resume
-    if (track?.url === newTrack.url) {
+    if (track?.url === newTrack.url || (track?.entryId && track.entryId === newTrack.entryId)) {
       audio.play();
       setIsPlaying(true);
       return;
@@ -122,7 +156,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setTrack(newTrack);
     setCurrentTime(0);
     setDuration(0);
-    audio.src = newTrack.url;
+    setBuffered(0);
+
+    // Use proxy URL when entryId is available for better Range request support
+    const audioSrc = newTrack.entryId
+      ? getProxyUrl(newTrack.entryId)
+      : newTrack.url;
+    audio.src = audioSrc;
     audio.playbackRate = playbackRate;
 
     // Restore position then play
@@ -193,7 +233,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   return (
     <AudioPlayerContext.Provider value={{
-      track, isPlaying, currentTime, duration, playbackRate, isLoading,
+      track, isPlaying, currentTime, duration, playbackRate, isLoading, isSeeking, buffered,
       play, pause, resume, togglePlay, seek, skip, setRate, stop,
     }}>
       {children}

@@ -8,8 +8,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { authMiddleware, type JWTPayload } from '../lib/auth.js';
+import { authMiddleware, verifyToken, type JWTPayload } from '../lib/auth.js';
 import { getDataClient } from '../feed-engine/data-source.js';
+import { FeedEngineDataClient } from '../feed-engine/data-source.js';
 import {
   extractEpisode,
   getEntryMedia,
@@ -21,7 +22,110 @@ import {
 } from '../services/podcast.js';
 
 const podcast = new Hono();
-podcast.use('*', authMiddleware);
+
+// Auth middleware for all routes EXCEPT /stream/* which handles its own auth
+// (HTML5 Audio element cannot set custom headers, so stream accepts ?token= query param)
+podcast.use('*', async (c, next) => {
+  if (c.req.path.match(/\/stream\//)) {
+    return next();
+  }
+  return authMiddleware(c, next);
+});
+
+// ============ Audio Streaming Proxy ============
+
+/**
+ * GET /api/podcast/stream/:entryId
+ * Proxy audio stream with proper Range request support.
+ * This ensures seeking always works regardless of the origin server's capabilities.
+ * 
+ * Accepts auth via:
+ *   - Authorization: Bearer <token> header (standard)
+ *   - ?token=<jwt> query parameter (for HTML5 Audio element which can't set headers)
+ */
+podcast.get('/stream/:entryId', async (c) => {
+  // Try Authorization header first, then query param
+  let user: JWTPayload | null = null;
+
+  const authHeader = c.req.header('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    user = await verifyToken(authHeader.slice(7));
+  }
+
+  if (!user) {
+    const tokenParam = c.req.query('token');
+    if (tokenParam) {
+      user = await verifyToken(tokenParam);
+    }
+  }
+
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const client = new FeedEngineDataClient(user.userId);
+  const entry = await client.getEntry(c.req.param('entryId'));
+
+  // Find audio URL from enclosures
+  const audioEnc = entry.enclosures?.find(
+    (enc: { mime_type: string }) => enc.mime_type?.startsWith('audio/')
+  );
+  if (!audioEnc) {
+    return c.json({ error: 'No audio found for this entry' }, 404);
+  }
+
+  const audioUrl = audioEnc.url;
+  const rangeHeader = c.req.header('range');
+
+  // Build headers for the upstream fetch
+  const upstreamHeaders: Record<string, string> = {
+    'User-Agent': 'FeedGlow/1.0',
+  };
+  if (rangeHeader) {
+    upstreamHeaders['Range'] = rangeHeader;
+  }
+
+  try {
+    const upstream = await fetch(audioUrl, {
+      headers: upstreamHeaders,
+      redirect: 'follow',
+    });
+
+    if (!upstream.ok && upstream.status !== 206) {
+      return c.json({ error: 'Failed to fetch audio from origin' }, 502);
+    }
+
+    // Build response headers
+    const responseHeaders = new Headers();
+
+    const contentType = upstream.headers.get('content-type') || audioEnc.mime_type || 'audio/mpeg';
+    responseHeaders.set('Content-Type', contentType);
+    responseHeaders.set('Accept-Ranges', 'bytes');
+    responseHeaders.set('Cache-Control', 'public, max-age=86400');
+
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) {
+      responseHeaders.set('Content-Length', contentLength);
+    }
+
+    const contentRange = upstream.headers.get('content-range');
+    if (contentRange) {
+      responseHeaders.set('Content-Range', contentRange);
+    }
+
+    // If upstream returned 206, pass it through; otherwise use its status
+    const status = upstream.status === 206 ? 206 : 200;
+
+    // Stream the body through without buffering
+    return new Response(upstream.body, {
+      status,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    console.error('Audio proxy error:', err);
+    return c.json({ error: 'Audio proxy failed' }, 502);
+  }
+});
 
 // ============ Feed Podcast Detection ============
 
