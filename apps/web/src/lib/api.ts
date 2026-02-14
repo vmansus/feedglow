@@ -1890,13 +1890,14 @@ export interface Highlight {
   feed_title?: string;
 }
 
-export async function getHighlights(entryId?: number): Promise<Highlight[]> {
-  const params = entryId ? `?entryId=${entryId}` : '';
+export async function getHighlights(entryId?: number | string, savedItemId?: number): Promise<Highlight[]> {
+  const params = savedItemId ? `?savedItemId=${savedItemId}` : entryId ? `?entryId=${entryId}` : '';
   return request(`/api/highlights${params}`).then((d: any) => d.highlights);
 }
 
 export async function createHighlight(data: {
-  entryId: number; text: string; note?: string; color?: string;
+  entryId?: number | string; savedItemId?: number;
+  text: string; note?: string; color?: string;
   positionStart?: number; positionEnd?: number; xpath?: string;
 }): Promise<Highlight> {
   return request('/api/highlights', { method: 'POST', body: JSON.stringify(data) });

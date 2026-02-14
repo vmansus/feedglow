@@ -12,13 +12,16 @@ const highlights = new Hono();
 highlights.use('*', authMiddleware);
 
 const createSchema = z.object({
-  entryId: z.union([z.number(), z.string()]),
+  entryId: z.union([z.number(), z.string()]).optional(),
+  savedItemId: z.number().optional(),
   text: z.string().min(1),
   note: z.string().optional(),
   color: z.enum(['yellow', 'green', 'blue', 'red']).default('yellow'),
   positionStart: z.number().optional(),
   positionEnd: z.number().optional(),
   xpath: z.string().optional(),
+}).refine(d => d.entryId !== undefined || d.savedItemId !== undefined, {
+  message: 'Either entryId or savedItemId is required',
 });
 
 const updateSchema = z.object({
@@ -26,21 +29,30 @@ const updateSchema = z.object({
   color: z.enum(['yellow', 'green', 'blue', 'red']).optional(),
 });
 
-// List user's highlights (optional ?entryId= filter)
+// List user's highlights (optional ?entryId= or ?savedItemId= filter)
 highlights.get('/', async (c) => {
   const user = c.get('user') as JWTPayload;
   const entryId = c.req.query('entryId');
+  const savedItemId = c.req.query('savedItemId');
 
   let sql = `
-    SELECT h.*, e.title as entry_title, e.url as entry_url, e.uuid as entry_uuid, f.title as feed_title
+    SELECT h.*, e.title as entry_title, e.url as entry_url, e.uuid as entry_uuid, f.title as feed_title,
+           si.title as saved_item_title, si.url as saved_item_url
     FROM fg_highlights h
     LEFT JOIN fg_entries e ON e.id = h.entry_id
     LEFT JOIN fg_feeds f ON f.id = e.feed_id
+    LEFT JOIN fg_saved_items si ON si.id = h.saved_item_id
     WHERE h.user_id = $1
   `;
   const params: any[] = [user.userId];
 
-  if (entryId) {
+  if (savedItemId) {
+    const parsed = parseInt(savedItemId, 10);
+    if (!isNaN(parsed)) {
+      sql += ` AND h.saved_item_id = $2`;
+      params.push(parsed);
+    }
+  } else if (entryId) {
     // entryId could be UUID or numeric
     const parsed = parseInt(entryId, 10);
     if (!isNaN(parsed)) {
@@ -121,41 +133,46 @@ highlights.post('/', async (c) => {
     throw err;
   }
 
-  // Resolve entry ID (frontend sends UUID, DB uses numeric ID)
-  let numericEntryId: number;
-  const raw = data.entryId;
-  if (typeof raw === 'number') {
-    numericEntryId = raw;
-  } else {
-    // Try UUID lookup first, then numeric string
-    const uuidCheck = await query(
-      'SELECT id FROM fg_entries WHERE uuid = $1 AND user_id = $2',
-      [raw, user.userId]
-    );
-    if (uuidCheck.rows.length > 0) {
-      numericEntryId = uuidCheck.rows[0].id;
+  let numericEntryId: number | null = null;
+  let numericSavedItemId: number | null = null;
+
+  if (data.savedItemId) {
+    // Saved item highlight
+    const check = await query('SELECT id FROM fg_saved_items WHERE id = $1 AND user_id = $2', [data.savedItemId, user.userId]);
+    if (check.rows.length === 0) return c.json({ error: 'Saved item not found' }, 404);
+    numericSavedItemId = data.savedItemId;
+  } else if (data.entryId !== undefined) {
+    // Entry highlight — resolve UUID/numeric
+    const raw = data.entryId;
+    if (typeof raw === 'number') {
+      numericEntryId = raw;
     } else {
-      const parsed = parseInt(raw, 10);
-      if (!isNaN(parsed)) {
-        numericEntryId = parsed;
+      const uuidCheck = await query(
+        'SELECT id FROM fg_entries WHERE uuid = $1 AND user_id = $2',
+        [raw, user.userId]
+      );
+      if (uuidCheck.rows.length > 0) {
+        numericEntryId = uuidCheck.rows[0].id;
       } else {
-        return c.json({ error: 'Entry not found' }, 404);
+        const parsed = parseInt(raw, 10);
+        if (!isNaN(parsed)) {
+          numericEntryId = parsed;
+        } else {
+          return c.json({ error: 'Entry not found' }, 404);
+        }
       }
     }
-  }
-
-  // Verify entry exists
-  const entryCheck = await query('SELECT id FROM fg_entries WHERE id = $1 AND user_id = $2', [numericEntryId, user.userId]);
-  if (entryCheck.rows.length === 0) {
-    return c.json({ error: 'Entry not found' }, 404);
+    const entryCheck = await query('SELECT id FROM fg_entries WHERE id = $1 AND user_id = $2', [numericEntryId, user.userId]);
+    if (entryCheck.rows.length === 0) return c.json({ error: 'Entry not found' }, 404);
   }
 
   const result = await query(
-    `INSERT INTO fg_highlights (user_id, entry_id, text, note, color, position_start, position_end, xpath)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    `INSERT INTO fg_highlights (user_id, entry_id, saved_item_id, text, note, color, position_start, position_end, xpath)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
     [
       user.userId,
       numericEntryId,
+      numericSavedItemId,
       data.text,
       data.note || null,
       data.color,

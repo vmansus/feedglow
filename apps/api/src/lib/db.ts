@@ -766,7 +766,8 @@ export async function runMigrations(): Promise<void> {
     CREATE TABLE IF NOT EXISTS fg_highlights (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES fg_users(id) ON DELETE CASCADE,
-      entry_id INTEGER NOT NULL REFERENCES fg_entries(id) ON DELETE CASCADE,
+      entry_id INTEGER REFERENCES fg_entries(id) ON DELETE CASCADE,
+      saved_item_id INTEGER REFERENCES fg_saved_items(id) ON DELETE CASCADE,
       text TEXT NOT NULL,
       note TEXT,
       color VARCHAR(20) DEFAULT 'yellow',
@@ -774,11 +775,13 @@ export async function runMigrations(): Promise<void> {
       position_end INTEGER,
       xpath TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT highlight_target_check CHECK (entry_id IS NOT NULL OR saved_item_id IS NOT NULL)
     )
   `);
   await query('CREATE INDEX IF NOT EXISTS idx_fg_highlights_user ON fg_highlights(user_id)');
   await query('CREATE INDEX IF NOT EXISTS idx_fg_highlights_entry ON fg_highlights(entry_id)');
+  await query('CREATE INDEX IF NOT EXISTS idx_fg_highlights_saved_item ON fg_highlights(saved_item_id)');
 
   // ============ P2: Shared Feeds (Curated Collections) ============
 

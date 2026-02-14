@@ -2,7 +2,7 @@
 
 import { getLocale, t } from '@/lib/i18n';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { formatDistanceToNow, differenceInDays, format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -22,10 +22,12 @@ import {
   Sparkles,
   Languages,
 } from 'lucide-react';
-import { summarizeSavedItem } from '@/lib/api';
-import type { SavedItem } from '@/lib/api';
+import { summarizeSavedItem, getHighlights, createHighlight, updateHighlight } from '@/lib/api';
+import type { SavedItem, Highlight } from '@/lib/api';
 import { useLayout } from '@/contexts/layout-context';
 import { useAISettings } from '@/hooks/use-ai-settings';
+import { useTextSelection } from '@/hooks/use-text-selection';
+import { HighlightToolbar } from '../entry/highlight-toolbar';
 import { BilingualContent } from '../entry/bilingual-content';
 import { TwitterEmbed } from './twitter-embed';
 
@@ -59,6 +61,8 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
   const { fullscreen, toggleFullscreen, setFullscreen } = useLayout();
   const source = SOURCE_CONFIG[item.source] || SOURCE_CONFIG.manual;
   const { data: aiSettings } = useAISettings();
+  const { selection, clearSelection, setManualSelection } = useTextSelection(contentRef);
+  const [savedHighlights, setSavedHighlights] = useState<Highlight[]>([]);
 
   // AI Summary
   const summarize = useMutation({
@@ -67,6 +71,57 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
       toast.error(err.message || t('saved.aiSummaryFailed'));
     },
   });
+
+  // Fetch existing highlights for this saved item
+  useEffect(() => {
+    getHighlights(undefined, item.id).then(setSavedHighlights).catch(() => {});
+  }, [item.id]);
+
+  const handleSaveHighlight = async (data: {
+    text: string; note?: string; color: string;
+    positionStart: number; positionEnd: number; xpath: string;
+  }) => {
+    try {
+      const saved = await createHighlight({
+        savedItemId: item.id,
+        text: data.text,
+        note: data.note,
+        color: data.color,
+        positionStart: data.positionStart,
+        positionEnd: data.positionEnd,
+        xpath: data.xpath,
+      });
+      setSavedHighlights(prev => [...prev, saved]);
+      toast.success(t('entry.highlightSaved'));
+      clearSelection();
+    } catch {
+      toast.error(t('entry.saveFailed'));
+    }
+  };
+
+  // Click on highlighted text → open toolbar
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    const nativeSel = window.getSelection();
+    if (nativeSel && !nativeSel.isCollapsed) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('a, button, [data-highlight-toolbar], .feedglow-note-icon')) return;
+    if (!contentRef.current || savedHighlights.length === 0) return;
+
+    const markEl = target.closest('mark[data-highlight-id]') as HTMLElement | null;
+    if (markEl) {
+      const hlId = Number(markEl.getAttribute('data-highlight-id'));
+      const hit = savedHighlights.find(h => h.id === hlId);
+      if (hit) {
+        setManualSelection({
+          text: hit.text,
+          positionStart: hit.position_start ?? 0,
+          positionEnd: hit.position_end ?? 0,
+          xpath: hit.xpath ?? '',
+          rect: markEl.getBoundingClientRect(),
+        });
+      }
+    }
+  }, [savedHighlights, setManualSelection]);
 
   // Reset progress on item change
   useEffect(() => {
@@ -165,8 +220,23 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
         />
       </div>
 
+      {/* Highlight Toolbar */}
+      <HighlightToolbar
+        selection={selection}
+        existingHighlights={savedHighlights}
+        onSave={handleSaveHighlight}
+        onUpdateNote={async (id, note) => {
+          try {
+            await updateHighlight(id, { note: note || undefined });
+            setSavedHighlights(prev => prev.map(h => h.id === id ? { ...h, note } : h));
+            toast.success(t('entry.noteSaved'));
+          } catch { toast.error(t('entry.saveFailed')); }
+        }}
+        onDismiss={clearSelection}
+      />
+
       {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
+      <div ref={contentRef} className="flex-1 overflow-y-auto" onClick={handleContentClick}>
         <article className="max-w-2xl mx-auto px-6 py-8">
           {/* Title */}
           <h1 className="text-2xl font-bold mb-4 leading-tight text-[rgb(var(--text-primary))]">
@@ -291,6 +361,7 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
                   content={item.content}
                   entryId={item.id}
                   enabled={translateEnabled}
+                  highlights={savedHighlights}
                 />
               )}
             </div>
@@ -311,6 +382,7 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
                   content={item.content}
                   entryId={item.id}
                   enabled={translateEnabled}
+                  highlights={savedHighlights}
                 />
               ) : item.description ? (
                 <p className="text-secondary leading-relaxed">{item.description}</p>
