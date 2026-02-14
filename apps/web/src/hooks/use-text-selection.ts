@@ -73,6 +73,12 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
     // Make sure selection is within our container
     if (!container.contains(range.commonAncestorContainer)) return;
 
+    // Skip selections within [data-no-highlight] zones (e.g. AI Summary)
+    const ancestor = range.commonAncestorContainer instanceof Element
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    if (ancestor?.closest('[data-no-highlight]')) return;
+
     const rect = range.getBoundingClientRect();
     const positionStart = getOffsetInContainer(range.startContainer, range.startOffset, container);
     const positionEnd = getOffsetInContainer(range.endContainer, range.endOffset, container);

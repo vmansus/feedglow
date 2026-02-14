@@ -255,7 +255,8 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
 
           {/* AI Summary Card - Glow Feature (same as entry-reader) */}
           {aiSettings?.enableSummary !== false && summarize.data ? (
-            <motion.div 
+            <motion.div
+              data-no-highlight
               initial={{ opacity: 0, y: 10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -304,7 +305,8 @@ export function SavedItemReader({ item, onClose, onDelete }: SavedItemReaderProp
               </div>
             </motion.div>
           ) : aiSettings?.enableSummary !== false ? (
-            <motion.div 
+            <motion.div
+              data-no-highlight
               whileHover={{ scale: 1.01 }}
               className="mt-6 mb-8 p-5 rounded-2xl border border-orange-500/30 cursor-pointer transition-all hover:border-orange-500/50"
               style={{ 
