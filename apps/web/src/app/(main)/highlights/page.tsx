@@ -280,7 +280,7 @@ export default function HighlightsPage() {
                               <textarea
                                 value={noteText}
                                 onChange={(e) => setNoteText(e.target.value)}
-                                className="w-full p-2 text-sm bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-default))] rounded resize-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--accent))] text-[rgb(var(--text-primary))]"
+                                className="w-full p-2 text-sm bg-[rgb(var(--bg-base))] border border-[rgb(var(--border-default))] rounded resize-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--accent))] text-[rgb(var(--text-primary))]"
                                 rows={2}
                                 autoFocus
                                 onKeyDown={(e) => {

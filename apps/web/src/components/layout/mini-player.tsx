@@ -66,7 +66,7 @@ export function MiniPlayer() {
   };
 
   return (
-    <div className="w-full flex-shrink-0 bg-[rgb(var(--bg-primary))] border-t border-[rgb(var(--border-default))]">
+    <div className="w-full flex-shrink-0 bg-[rgb(var(--bg-base))] border-t border-[rgb(var(--border-default))]">
       {/* Transcript panel (slides up above mini-player) */}
       {showTranscript && player.track?.entryId && (
         <div className="border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-elevated))]">

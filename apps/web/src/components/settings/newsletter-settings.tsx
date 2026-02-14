@@ -101,7 +101,7 @@ export function NewsletterSettings() {
           {subscriptions.map((sub) => (
             <div
               key={sub.id}
-              className="p-4 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-primary))]"
+              className="p-4 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-base))]"
             >
               {editingId === sub.id ? (
                 <EditForm
@@ -216,7 +216,7 @@ function CreateForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('settings.newsletter.nameRequired')}
-            className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] text-sm focus:border-orange-500 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-base))] text-[rgb(var(--text-primary))] text-sm focus:border-orange-500 focus:outline-none"
             autoFocus
           />
         </div>
@@ -225,7 +225,7 @@ function CreateForm({
           <select
             value={categoryId || ''}
             onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
-            className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] text-sm"
+            className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-base))] text-[rgb(var(--text-primary))] text-sm"
           >
             <option value="">{t('settings.newsletter.noCategory')}</option>
             {categories.map((c: any) => (
@@ -252,7 +252,7 @@ function CreateForm({
               value={senderFilter}
               onChange={(e) => setSenderFilter(e.target.value)}
               placeholder={t('settings.newsletter.senderFilterPlaceholder')}
-              className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] text-sm focus:border-orange-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-base))] text-[rgb(var(--text-primary))] text-sm focus:border-orange-500 focus:outline-none"
             />
             <p className="text-xs text-[rgb(var(--text-muted))] mt-1">
               {t('settings.newsletter.senderFilterDesc')}

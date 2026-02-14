@@ -145,7 +145,7 @@ export function TwitterEmbed({ url, fallbackContent }: TwitterEmbedProps) {
   const createdAt = tweet?.createdAt;
 
   return (
-    <div className="border border-default rounded-2xl overflow-hidden bg-[rgb(var(--bg-primary))] max-w-xl">
+    <div className="border border-default rounded-2xl overflow-hidden bg-[rgb(var(--bg-base))] max-w-xl">
       {/* Header */}
       <div className="p-4 flex items-start gap-3">
         {/* Avatar */}
