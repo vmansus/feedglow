@@ -649,7 +649,9 @@ entries.post('/:id/summarize', async (c) => {
     }
 
     const config = await getAIConfigForUser(getUserId(c));
-    const summary = await summarizeArticle(entry, config);
+    let language: string | undefined;
+    try { language = (await c.req.json()).language; } catch {}
+    const summary = await summarizeArticle(entry, config, language);
 
     return c.json({
       entryId: entry.id,

@@ -104,9 +104,21 @@ function getModel(config: AIConfig) {
 /**
  * Generate a summary for an article
  */
+const LANG_MAP: Record<string, string> = {
+  'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'en': 'English',
+  'ja': '日本語', 'ko': '한국어', 'fr': 'Français',
+  'de': 'Deutsch', 'es': 'Español', 'ru': 'Русский',
+};
+
+function getLangName(lang?: string): string {
+  if (!lang) return '简体中文';
+  return LANG_MAP[lang] || lang;
+}
+
 export async function summarizeArticle(
   entry: Entry,
-  config: AIConfig
+  config: AIConfig,
+  language?: string
 ): Promise<SummaryResult> {
   // Rate limiting check
   if (!rateLimiter.tryConsume()) {
@@ -114,10 +126,13 @@ export async function summarizeArticle(
   }
 
   const model = getModel(config);
+  const langName = getLangName(language);
 
   const prompt = `Please analyze the following article and provide:
 1. A concise summary (2-3 sentences)
 2. 3-5 key points as bullet points
+
+IMPORTANT: Respond in ${langName}.
 
 Article Title: ${entry.title}
 Article Content:
@@ -161,16 +176,20 @@ Respond in JSON format:
 export async function summarizeContent(
   title: string,
   content: string,
-  config: AIConfig
+  config: AIConfig,
+  language?: string
 ): Promise<SummaryResult> {
   if (!rateLimiter.tryConsume()) {
     throw new AIRateLimitError();
   }
 
   const model = getModel(config);
+  const langName = getLangName(language);
   const prompt = `Please analyze the following content and provide:
 1. A concise summary (2-3 sentences)
 2. 3-5 key points as bullet points
+
+IMPORTANT: Respond in ${langName}.
 
 Title: ${title}
 Content:

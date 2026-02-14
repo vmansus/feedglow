@@ -128,7 +128,7 @@ saved.post('/summarize', async (c) => {
   
   try {
     const body = await c.req.json();
-    const { id } = z.object({ id: z.number() }).parse(body);
+    const { id, language } = z.object({ id: z.number(), language: z.string().optional() }).parse(body);
     
     const aiSettings = await getAISettings(user.userId);
     if (!aiSettings.enableSummary) {
@@ -142,7 +142,7 @@ saved.post('/summarize', async (c) => {
     if (!content) return c.json({ error: 'No content to summarize' }, 400);
 
     const config = await getAIConfigForUser(user.userId);
-    const result = await summarizeContent(item.title || 'Untitled', content, config);
+    const result = await summarizeContent(item.title || 'Untitled', content, config, language);
 
     return c.json({ id, ...result });
   } catch (err) {

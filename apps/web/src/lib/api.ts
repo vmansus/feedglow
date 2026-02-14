@@ -469,8 +469,10 @@ export async function getSharedEntry(code: string): Promise<Entry> {
 // ============ AI Features ============
 
 export async function summarizeEntry(id: number): Promise<SummaryResult> {
+  const language = typeof window !== 'undefined' ? localStorage.getItem('translateLanguage') || 'zh-CN' : 'zh-CN';
   return request<SummaryResult>(`/api/entries/${id}/summarize`, {
     method: 'POST',
+    body: JSON.stringify({ language }),
   });
 }
 
@@ -1494,9 +1496,10 @@ export async function bulkDeleteSavedItems(ids: number[]): Promise<{ deleted: nu
 }
 
 export async function summarizeSavedItem(id: number): Promise<SummaryResult> {
+  const language = typeof window !== 'undefined' ? localStorage.getItem('translateLanguage') || 'zh-CN' : 'zh-CN';
   return request<SummaryResult>('/api/saved/summarize', {
     method: 'POST',
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ id, language }),
   });
 }
 
