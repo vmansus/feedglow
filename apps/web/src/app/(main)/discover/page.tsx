@@ -61,6 +61,22 @@ function getFaviconUrl(siteUrl: string | undefined, feedUrl?: string): string | 
   }
 }
 
+// Normalize a feed URL for comparison — strips protocol, www, trailing slashes
+function normalizeFeedUrl(url: string): string {
+  try {
+    let s = url.toLowerCase().trim();
+    // Remove protocol
+    s = s.replace(/^https?:\/\//, '');
+    // Remove www.
+    s = s.replace(/^www\./, '');
+    // Remove trailing slash
+    s = s.replace(/\/+$/, '');
+    return s;
+  } catch {
+    return url.toLowerCase().trim();
+  }
+}
+
 // Category mapping for recommendations
 const CATEGORY_MAPPING: Record<string, string[]> = {
   'tech': ['programming', 'new-media', 'design'],
@@ -693,10 +709,10 @@ function DiscoverContent() {
     throwOnError: false,
   });
 
-  // Set of already subscribed feed URLs (to filter recommendations)
+  // Set of already subscribed feed URLs (normalized for robust matching)
   const subscribedUrls = useMemo(() => {
     if (!userFeeds || !Array.isArray(userFeeds)) return new Set<string>();
-    return new Set(userFeeds.map(f => f.feedUrl?.toLowerCase()).filter(Boolean));
+    return new Set(userFeeds.map(f => f.feedUrl ? normalizeFeedUrl(f.feedUrl) : '').filter(Boolean));
   }, [userFeeds]);
 
   // Analyze user's READING habits (not just subscriptions)
@@ -780,7 +796,7 @@ function DiscoverContent() {
       let feeds = result.feeds || [];
       
       // Filter out already subscribed
-      feeds = feeds.filter(f => !subscribedUrls.has(f.feedUrl?.toLowerCase() || ''));
+      feeds = feeds.filter(f => !subscribedUrls.has(normalizeFeedUrl(f.feedUrl || '')));
       
       // If user has reading habits, prioritize matching categories
       if (rsshubCategories.length > 0) {
@@ -1137,7 +1153,7 @@ function DiscoverContent() {
               currentRoutes.map((route) => {
                 const routeKey = route.feedUrl || (route as any).url || route.path || route.name;
                 const isExpanded = expandedRoute === routeKey;
-                const isSubscribed = subscribedUrls.has(routeKey?.toLowerCase() || '');
+                const isSubscribed = subscribedUrls.has(normalizeFeedUrl(routeKey || ''));
                 
                 if (isExpanded) {
                   return (
